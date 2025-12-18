@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页摄像头测试</title>
+    <!-- 引入 Tailwind CSS 进行美化 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 简单的镜像效果，让自拍预览更自然 */
+        .mirror {
+            transform: scaleX(-1);
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md">
+        <h1 class="text-2xl font-bold text-gray-800 mb-4 text-center">📷 摄像头预览</h1>
+
+        <!-- 视频预览区域 -->
+        <div class="relative w-full aspect-[4/3] bg-black rounded-lg overflow-hidden mb-4 shadow-inner">
+            <video id="webcam" autoplay playsinline class="w-full h-full object-cover mirror"></video>
+            
+            <!-- 等待时的遮罩层 -->
+            <div id="placeholder" class="absolute inset-0 flex items-center justify-center text-gray-400">
+                <div class="text-center">
+                    <p class="text-4xl mb-2">😴</p>
+                    <p>摄像头未启动</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 状态/错误信息显示 -->
+        <div id="statusMessage" class="hidden mb-4 p-3 rounded-lg text-sm text-center"></div>
+
+        <!-- 控制按钮 -->
+        <div class="flex gap-3">
+            <button id="startBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                开启摄像头
+            </button>
+            <button id="stopBtn" class="hidden flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors">
+                关闭
+            </button>
+        </div>
+
+        <div class="mt-6 text-xs text-gray-500 text-center border-t pt-4">
+            <p>注意：为了隐私安全，浏览器要求必须使用 <strong>HTTPS</strong> 协议或 <strong>localhost</strong> 才能访问摄像头。</p>
+        </div>
+    </div>
+
+    <script>
+        const videoElement = document.getElementById('webcam');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const placeholder = document.getElementById('placeholder');
+        const statusMsg = document.getElementById('statusMessage');
+        let stream = null;
+
+        // 显示消息的工具函数
+        function showMessage(msg, type = 'error') {
+            statusMsg.textContent = msg;
+            statusMsg.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-blue-100', 'text-blue-700');
+            
+            if (type === 'error') {
+                statusMsg.classList.add('bg-red-100', 'text-red-700');
+            } else if (type === 'success') {
+                statusMsg.classList.add('bg-green-100', 'text-green-700');
+            } else {
+                statusMsg.classList.add('bg-blue-100', 'text-blue-700');
+            }
+            statusMsg.classList.remove('hidden');
+        }
+
+        // 开启摄像头
+        async function startCamera() {
+            statusMsg.classList.add('hidden');
+            
+            // 检查浏览器是否支持
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showMessage("您的浏览器不支持访问摄像头，或者未在 HTTPS 环境下运行。", "error");
+                return;
+            }
+
+            try {
+                // 请求摄像头权限
+                // video: { facingMode: "user" } 优先使用前置摄像头
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: "user",
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }, 
+                    audio: false 
+                });
+
+                videoElement.srcObject = stream;
+                
+                // UI 状态切换
+                placeholder.classList.add('hidden');
+                startBtn.classList.add('hidden');
+                stopBtn.classList.remove('hidden', 'flex'); // 确保 flex 布局保持
+                stopBtn.classList.add('flex');
+                
+                showMessage("摄像头已启动", "success");
+
+            } catch (err) {
+                console.error("摄像头访问失败:", err);
+                
+                let errorText = "无法访问摄像头。";
+                
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    errorText = "您拒绝了摄像头权限。请重置权限并重试。";
+                } else if (err.name === 'NotFoundError') {
+                    errorText = "未找到摄像头设备。";
+                } else if (err.name === 'NotReadableError') {
+                    errorText = "摄像头可能被其他程序占用。";
+                } else if (window.location.protocol === 'file:') {
+                    errorText = "请勿直接打开 HTML 文件。请将其部署到 HTTPS 服务器或使用 Localhost。";
+                }
+
+                showMessage(errorText, "error");
+            }
+        }
+
+        // 关闭摄像头
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                videoElement.srcObject = null;
+                stream = null;
+            }
+
+            // UI 状态恢复
+            placeholder.classList.remove('hidden');
+            startBtn.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
+            stopBtn.classList.remove('flex');
+            
+            showMessage("摄像头已关闭", "info");
+        }
+
+        // 事件监听
+        startBtn.addEventListener('click', startCamera);
+        stopBtn.addEventListener('click', stopCamera);
+    </script>
+</body>
+</html>
