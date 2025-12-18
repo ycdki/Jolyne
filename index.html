@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Magical Christmas Tree V3</title>
+    <title>Magical Christmas Tree V4</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000000; font-family: 'Times New Roman', serif; touch-action: none; }
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
@@ -127,15 +127,12 @@
 </head>
 <body>
 
-    <!-- Audio Element: User needs to replace 'src' with their file -->
-    <audio id="bgm" loop>
-        <!-- 
-            使用指南：
-            1. 将您的音乐文件（如 music.mp3）放在与此 HTML 文件相同的文件夹中。
-            2. 修改下面的 src="music.mp3"。
-            3. 如果没有文件，这个默认的 src 会失败，但我们的代码会处理它（不报错）。
-        -->
+    <!-- Audio Element -->
+    <audio id="bgm" loop crossorigin="anonymous">
+        <!-- 优先级 1: 本地文件 (你需要自己放一个 music.mp3) -->
         <source src="music.mp3" type="audio/mpeg">
+        <!-- 优先级 2: 在线默认歌曲 (如果本地没有，会自动播放这个) -->
+        <source src="https://upload.wikimedia.org/wikipedia/commons/8/89/Jingle_Bells_%28Kevin_MacLeod%29_%28Source_2%29.ogg" type="audio/ogg">
     </audio>
 
     <div id="loader">
@@ -150,13 +147,13 @@
         
         <div class="controls-container">
             <label class="glass-btn">
-                <span>📷 Upload</span>
+                <span>📷 Add Photos</span>
                 <input type="file" id="file-input" multiple accept="image/*">
             </label>
         </div>
 
         <div class="hint-text">
-            Drag/Swipe to Rotate • Pinch to Focus (Webcam)<br>
+            Tap Photo to Focus • Pinch to Zoom • Swipe to Rotate<br>
             Tap 'H' to Hide UI
         </div>
     </div>
@@ -181,12 +178,10 @@
         import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'; 
         import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 
-        // --- CUSTOM CONFIGURATION (用户自定义区域) ---
-        // 在这里填写朋友的照片 URL。由于这是本地文件，建议使用相对路径或网络 URL。
-        // 如果没有真正的 URL，系统会自动生成彩色卡片代替。
+        // --- CONFIGURATION ---
         const PRELOAD_IMAGES = [
-            { name: "Bestie", url: "photo1.jpg" }, 
-            { name: "Family", url: "photo2.jpg" },
+            { name: "Friend 1", url: "photo1.jpg" }, 
+            { name: "Friend 2", url: "photo2.jpg" },
             { name: "Love",   url: "photo3.jpg" }
         ];
 
@@ -198,9 +193,8 @@
                 accentRed: 0x990000,     
             },
             particles: {
-                // Mobile optimization: fewer particles on mobile
-                count: window.innerWidth < 768 ? 800 : 1500,     
-                dustCount: window.innerWidth < 768 ? 1000 : 2500, 
+                count: window.innerWidth < 768 ? 600 : 1500, // Reduced for mobile performance w/ camera
+                dustCount: window.innerWidth < 768 ? 800 : 2500, 
                 treeHeight: 24,  
                 treeRadius: 8    
             },
@@ -213,7 +207,12 @@
             focusTarget: null,
             hand: { detected: false, x: 0, y: 0 },
             rotation: { x: 0, y: 0 },
-            touch: { isDragging: false, lastX: 0, lastY: 0 }
+            touch: { 
+                isDragging: false, 
+                lastX: 0, lastY: 0,
+                initialPinchDist: 0,
+                lastZoom: CONFIG.camera.z
+            }
         };
 
         let scene, camera, renderer, composer;
@@ -223,9 +222,10 @@
         let photoMeshGroup = new THREE.Group();
         let handLandmarker, video;
         let caneTexture; 
-        let audioCtx; // For generated SFX
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
 
-        // --- SOUND EFFECT SYSTEM (No external files needed) ---
+        // --- SOUND EFFECT SYSTEM ---
         class SoundFX {
             constructor() {
                 this.ctx = window.AudioContext ? new (window.AudioContext || window.webkitAudioContext)() : null;
@@ -235,15 +235,11 @@
                 if (!this.ctx) return;
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
-                
                 osc.type = 'sine';
-                // Random high pitch for sparkle
                 osc.frequency.setValueAtTime(800 + Math.random() * 1000, this.ctx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.5);
-                
                 gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
-                
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
                 osc.start();
@@ -264,7 +260,6 @@
             createParticles(); 
             createDust();     
             
-            // Generate initial photos + Load user preloads
             createDefaultPhotos();
             await loadPreloadedImages();
 
@@ -272,11 +267,11 @@
             setupEvents();
             setupMusic();
             
-            // Try loading MediaPipe, but don't block if it fails (mobile fallback)
+            // Start MediaPipe everywhere (Mobile included)
             try {
                 await initMediaPipe();
             } catch (e) {
-                console.warn("MediaPipe failed to load (likely mobile or permission), using touch controls.", e);
+                console.warn("MediaPipe failed to load (camera permission denied?).", e);
             }
             
             const loader = document.getElementById('loader');
@@ -351,7 +346,6 @@
             caneTexture.wrapS = THREE.RepeatWrapping; caneTexture.wrapT = THREE.RepeatWrapping; caneTexture.repeat.set(3, 3);
         }
 
-        // --- PARTICLE CLASS ---
         class Particle {
             constructor(mesh, type, isDust = false) {
                 this.mesh = mesh;
@@ -490,58 +484,42 @@
             }
         }
 
-        // --- IMAGE HANDLING & PRELOADING ---
-        
         function generatePlaceholder(text, color) {
             const canvas = document.createElement('canvas');
             canvas.width = 512; canvas.height = 512;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = '#050505'; ctx.fillRect(0,0,512,512);
-            // Polaroid style
             ctx.fillStyle = '#fff'; ctx.fillRect(20,20,472,472);
             ctx.fillStyle = color || '#000'; ctx.fillRect(40,40,432,350);
-            
             ctx.font = '500 40px Times New Roman'; ctx.fillStyle = '#333';
             ctx.textAlign = 'center'; 
             ctx.fillText(text, 256, 440);
-            
             const tex = new THREE.CanvasTexture(canvas);
             tex.colorSpace = THREE.SRGBColorSpace;
             return tex;
         }
 
         function createDefaultPhotos() {
-            // Main Centerpiece
             const tex = generatePlaceholder("JOYEUX NOEL", "#03180a");
             addPhotoToScene(tex);
         }
 
         async function loadPreloadedImages() {
             const loader = new THREE.TextureLoader();
-            
             for (const item of PRELOAD_IMAGES) {
-                // Try to load real image, fallback to generated if it fails (common in demos)
                 try {
-                    await new Promise((resolve, reject) => {
-                        loader.load(
-                            item.url,
-                            (texture) => {
-                                texture.colorSpace = THREE.SRGBColorSpace;
-                                addPhotoToScene(texture);
-                                resolve();
-                            },
-                            undefined,
-                            (err) => {
-                                // If error, generate a placeholder with the name
-                                const color = `hsl(${Math.random()*360}, 50%, 20%)`;
-                                addPhotoToScene(generatePlaceholder(item.name, color));
-                                resolve(); // Resolve anyway to continue
-                            }
-                        );
+                    await new Promise((resolve) => {
+                        loader.load(item.url, (texture) => {
+                            texture.colorSpace = THREE.SRGBColorSpace;
+                            addPhotoToScene(texture);
+                            resolve();
+                        }, undefined, () => {
+                            const color = `hsl(${Math.random()*360}, 50%, 20%)`;
+                            addPhotoToScene(generatePlaceholder(item.name, color));
+                            resolve();
+                        });
                     });
-                } catch (e) {
-                    console.log("Image load skipped for", item.name);
-                }
+                } catch (e) { }
             }
         }
 
@@ -553,20 +531,19 @@
             const photoMat = new THREE.MeshBasicMaterial({ map: texture });
             const photo = new THREE.Mesh(photoGeo, photoMat);
             photo.position.z = 0.04;
-
             const group = new THREE.Group();
             group.add(frame);
             group.add(photo);
             const s = 0.8;
             group.scale.set(s,s,s);
+            group.userData = { isPhoto: true }; // Mark for raycaster
             
             photoMeshGroup.add(group);
             particleSystem.push(new Particle(group, 'PHOTO', false));
         }
         
         function handleImageUpload(e) {
-            sfx.playSparkle(); // SFX
-            sfx.resume();
+            sfx.playSparkle(); sfx.resume();
             const files = e.target.files;
             if(!files.length) return;
             Array.from(files).forEach(f => {
@@ -581,20 +558,18 @@
             });
         }
 
-        // --- AUDIO & INTERACTIONS ---
         function setupMusic() {
             const bgm = document.getElementById('bgm');
             const btn = document.getElementById('music-toggle');
             
             btn.addEventListener('click', () => {
-                sfx.resume(); // Ensure audio context is ready
+                sfx.resume();
                 if (bgm.paused) {
                     bgm.play().then(() => {
                         btn.classList.add('playing');
                         btn.innerHTML = '❚❚';
                     }).catch(e => {
-                        alert("Please add a 'music.mp3' file to the folder!");
-                        console.log(e);
+                        console.log("Audio play failed (interaction needed or source error)", e);
                     });
                 } else {
                     bgm.pause();
@@ -604,7 +579,6 @@
             });
         }
 
-        // --- EVENTS & TOUCH CONTROLS ---
         function setupEvents() {
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
@@ -621,56 +595,123 @@
                 }
             });
 
-            // Touch/Mouse Drag Logic for Rotation
             const container = document.getElementById('canvas-container');
             
-            const onDown = (x, y) => {
-                STATE.touch.isDragging = true;
-                STATE.touch.lastX = x;
-                STATE.touch.lastY = y;
-                // Interactions on click/touch
-                sfx.resume();
-            };
+            // --- ENHANCED TOUCH & CLICK ---
             
-            const onMove = (x, y) => {
-                if (!STATE.touch.isDragging) return;
-                const deltaX = x - STATE.touch.lastX;
-                const deltaY = y - STATE.touch.lastY;
+            function handleTap(clientX, clientY) {
+                // Raycasting for tap-to-focus
+                mouse.x = (clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+
+                const intersects = raycaster.intersectObjects(photoMeshGroup.children, true);
+                let hitPhoto = null;
                 
-                // Manually rotate main group based on drag
+                // Traverse up to find the group with userdata
+                if (intersects.length > 0) {
+                    let obj = intersects[0].object;
+                    while(obj.parent && obj !== photoMeshGroup) {
+                        if (obj.userData && obj.userData.isPhoto) {
+                            hitPhoto = obj;
+                            break;
+                        }
+                        obj = obj.parent;
+                    }
+                }
+
+                if (hitPhoto) {
+                    STATE.mode = 'FOCUS';
+                    STATE.focusTarget = hitPhoto;
+                    sfx.playSparkle();
+                } else {
+                    // Tap background to reset
+                    if (STATE.mode === 'FOCUS') {
+                        STATE.mode = 'SCATTER'; // Go back to scatter first
+                        STATE.focusTarget = null;
+                        sfx.playSparkle();
+                    }
+                }
+            }
+
+            // Mouse Events
+            container.addEventListener('mousedown', e => {
+                STATE.touch.isDragging = true;
+                STATE.touch.lastX = e.clientX;
+                STATE.touch.lastY = e.clientY;
+                sfx.resume();
+            });
+            window.addEventListener('mousemove', e => {
+                if (!STATE.touch.isDragging) return;
+                const deltaX = e.clientX - STATE.touch.lastX;
+                const deltaY = e.clientY - STATE.touch.lastY;
                 STATE.rotation.y += deltaX * 0.005;
                 STATE.rotation.x += deltaY * 0.005;
-                
-                STATE.touch.lastX = x;
-                STATE.touch.lastY = y;
-            };
+                STATE.touch.lastX = e.clientX;
+                STATE.touch.lastY = e.clientY;
+            });
+            window.addEventListener('mouseup', (e) => {
+                STATE.touch.isDragging = false;
+                // Simple click detection (no drag)
+                if (Math.abs(e.clientX - STATE.touch.lastX) < 5 && Math.abs(e.clientY - STATE.touch.lastY) < 5) {
+                    handleTap(e.clientX, e.clientY);
+                }
+            });
 
-            const onUp = () => { STATE.touch.isDragging = false; };
-
-            // Mouse
-            container.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
-            window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
-            window.addEventListener('mouseup', onUp);
-
-            // Touch (Mobile)
+            // Touch Events (Multi-touch support)
             container.addEventListener('touchstart', e => {
-                if(e.touches.length === 1) onDown(e.touches[0].clientX, e.touches[0].clientY);
-            }, {passive: false});
-            
-            container.addEventListener('touchmove', e => {
-                if(e.touches.length === 1) {
-                    e.preventDefault(); // Stop scrolling
-                    onMove(e.touches[0].clientX, e.touches[0].clientY);
+                sfx.resume();
+                if (e.touches.length === 1) {
+                    STATE.touch.isDragging = true;
+                    STATE.touch.lastX = e.touches[0].clientX;
+                    STATE.touch.lastY = e.touches[0].clientY;
+                } else if (e.touches.length === 2) {
+                    // Start Pinch
+                    STATE.touch.isDragging = false; // Disable rotation when pinching
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    STATE.touch.initialPinchDist = Math.hypot(dx, dy);
+                    STATE.touch.lastZoom = camera.position.z;
                 }
             }, {passive: false});
-            
-            window.addEventListener('touchend', onUp);
+
+            container.addEventListener('touchmove', e => {
+                e.preventDefault(); 
+                if (e.touches.length === 1 && STATE.touch.isDragging) {
+                    const deltaX = e.touches[0].clientX - STATE.touch.lastX;
+                    const deltaY = e.touches[0].clientY - STATE.touch.lastY;
+                    STATE.rotation.y += deltaX * 0.008;
+                    STATE.rotation.x += deltaY * 0.008;
+                    STATE.touch.lastX = e.touches[0].clientX;
+                    STATE.touch.lastY = e.touches[0].clientY;
+                } else if (e.touches.length === 2) {
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    const currentDist = Math.hypot(dx, dy);
+                    
+                    // Zoom logic
+                    const scaleFactor = STATE.touch.initialPinchDist / currentDist;
+                    let newZ = STATE.touch.lastZoom * scaleFactor;
+                    
+                    // Clamp Zoom
+                    newZ = Math.max(10, Math.min(newZ, 120));
+                    camera.position.z = newZ;
+                }
+            }, {passive: false});
+
+            container.addEventListener('touchend', e => {
+                STATE.touch.isDragging = false;
+                // If it was a quick tap with no movement (simplistic detection)
+                if (e.changedTouches.length === 1 && e.touches.length === 0) {
+                     // We use the last known position from touchstart or move
+                     handleTap(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+                }
+            });
         }
 
-        // --- MEDIAPIPE ---
         async function initMediaPipe() {
-            if (window.innerWidth < 768) return; // Optional: Skip heavyweight ML on mobile to save battery
-            
+            // REMOVED MOBILE CHECK: Now runs on all devices
+            // Warning: Heavy on low-end mobile devices
             video = document.getElementById('webcam');
             const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
             handLandmarker = await HandLandmarker.createFromOptions(vision, {
@@ -682,6 +723,8 @@
             });
             
             if (navigator.mediaDevices?.getUserMedia) {
+                // Must be inside a user interaction on iOS usually, but we try anyway.
+                // If this fails, the 'Start Magic' button could be used to retry.
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
                 video.addEventListener("loadeddata", predictWebcam);
@@ -706,7 +749,6 @@
                 const lm = result.landmarks[0];
                 STATE.hand.x = (lm[9].x - 0.5) * 2; 
                 STATE.hand.y = (lm[9].y - 0.5) * 2;
-
                 const thumb = lm[4]; const index = lm[8]; const wrist = lm[0];
                 const pinchDist = Math.hypot(thumb.x - index.x, thumb.y - index.y);
                 const tips = [lm[8], lm[12], lm[16], lm[20]];
@@ -714,26 +756,18 @@
                 tips.forEach(t => avgDist += Math.hypot(t.x - wrist.x, t.y - wrist.y));
                 avgDist /= 4;
 
-                // Pinch for Focus Mode
                 if (pinchDist < 0.05) {
                     if (STATE.mode !== 'FOCUS') {
-                        STATE.mode = 'FOCUS';
-                        sfx.playSparkle(); // Play Sound
+                        STATE.mode = 'FOCUS'; sfx.playSparkle();
                         const photos = particleSystem.filter(p => p.type === 'PHOTO');
                         if (photos.length) STATE.focusTarget = photos[Math.floor(Math.random()*photos.length)].mesh;
                     }
-                } 
-                // Fist for Tree
-                else if (avgDist < 0.25) {
+                } else if (avgDist < 0.25) {
                     if (STATE.mode !== 'TREE') sfx.playSparkle();
-                    STATE.mode = 'TREE';
-                    STATE.focusTarget = null;
-                } 
-                // Open Palm for Scatter
-                else if (avgDist > 0.4) {
+                    STATE.mode = 'TREE'; STATE.focusTarget = null;
+                } else if (avgDist > 0.4) {
                     if (STATE.mode !== 'SCATTER') sfx.playSparkle();
-                    STATE.mode = 'SCATTER';
-                    STATE.focusTarget = null;
+                    STATE.mode = 'SCATTER'; STATE.focusTarget = null;
                 }
             } else {
                 STATE.hand.detected = false;
@@ -744,7 +778,6 @@
             requestAnimationFrame(animate);
             const dt = clock.getDelta();
 
-            // Rotation Mixing: Hand Tracking + Touch/Drag
             if (!STATE.touch.isDragging) {
                 if (STATE.mode === 'SCATTER' && STATE.hand.detected) {
                     const targetRotY = STATE.hand.x * Math.PI * 0.9; 
@@ -752,7 +785,7 @@
                     STATE.rotation.y += (targetRotY - STATE.rotation.y) * 3.0 * dt;
                     STATE.rotation.x += (targetRotX - STATE.rotation.x) * 3.0 * dt;
                 } else if(STATE.mode === 'TREE') {
-                    STATE.rotation.y += 0.3 * dt; // Auto spin
+                    STATE.rotation.y += 0.3 * dt;
                     STATE.rotation.x += (0 - STATE.rotation.x) * 2.0 * dt;
                 } else {
                     STATE.rotation.y += 0.1 * dt; 
