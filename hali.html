@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>霍格沃茨魔法魔杖训练 - 最终幻想版</title>
+    <title>霍格沃茨魔法魔杖训练 - 实战试炼版</title>
     <style>
         body {
             margin: 0;
@@ -13,6 +13,7 @@
             color: #d4af37;
             user-select: none;
             cursor: none;
+            -webkit-tap-highlight-color: transparent; /* 移动端去高亮 */
         }
         
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Great+Vibes&family=Spectral:ital,wght@0,400;1,400&display=swap');
@@ -21,8 +22,8 @@
         #video-input {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             object-fit: cover; opacity: 0; pointer-events: none; z-index: 0;
+            transform: scaleX(-1); /* 默认镜像 */
         }
-        .mirror-video { transform: scaleX(-1); }
 
         /* Canvas 层 */
         #canvas-container {
@@ -66,19 +67,19 @@
             margin-top: -5px; opacity: 0.9; letter-spacing: 2px;
         }
 
-        /* 典藏版文本框 */
+        /* 文本框 */
         #instruction-box {
             background: rgba(12, 12, 16, 0.85);
             border: 1px solid #d4af37;
-            padding: 20px 60px; text-align: center;
+            padding: 15px 40px; text-align: center;
             margin-top: 30px; position: relative;
             transform: translateY(0); transition: all 0.5s;
             box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 0 30px rgba(0,0,0,0.5);
             backdrop-filter: blur(8px);
             max-width: 600px;
+            min-width: 300px;
         }
         
-        /* 双线装饰边框 */
         #instruction-box::after {
             content: ''; position: absolute;
             top: 4px; left: 4px; right: 4px; bottom: 4px;
@@ -93,33 +94,54 @@
 
         #instruction { 
             font-family: 'Spectral', serif;
-            font-size: 1.3rem; color: #eaddcf; line-height: 1.6; 
+            font-size: 1.2rem; color: #eaddcf; line-height: 1.4; 
             text-shadow: 0 2px 4px rgba(0,0,0,0.9);
             font-style: italic;
         }
         
         .highlight { color: #ffce5c; font-weight: normal; border-bottom: 1px solid rgba(255, 206, 92, 0.3); font-style: normal; font-family: 'Cinzel', serif; letter-spacing: 1px; }
+        .danger { color: #ff4444; font-weight: bold; border-bottom: 1px solid #ff0000; text-shadow: 0 0 10px #ff0000; }
+
+        /* Boss 血条 */
+        #boss-hud {
+            position: absolute; top: 160px; width: 70%; max-width: 500px;
+            opacity: 0; transition: opacity 1s; pointer-events: none;
+        }
+        #boss-name {
+            text-align: center; font-family: 'Cinzel', serif; color: #ccaaee; letter-spacing: 2px; margin-bottom: 5px; text-shadow: 0 0 10px #8800ff; font-size: 0.9rem;
+        }
+        #health-bar-frame {
+            width: 100%; height: 8px; border: 1px solid #555; background: rgba(0,0,0,0.8);
+            position: relative; box-shadow: 0 0 10px rgba(100,0,255,0.2);
+        }
+        #health-bar-fill {
+            width: 100%; height: 100%; background: linear-gradient(90deg, #440088, #8800ff);
+            transition: width 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
 
         #spell-cast-display {
             position: absolute; top: 45%; width: 100%; text-align: center;
             pointer-events: none; opacity: 0; transform: scale(0.8);
-            transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
         }
 
         .spell-text {
-            font-family: 'Cinzel', serif; font-weight: 900; font-size: 5rem;
-            letter-spacing: 10px; color: #fff;
+            font-family: 'Cinzel', serif; font-weight: 900; font-size: 4rem;
+            letter-spacing: 8px; color: #fff;
             text-shadow: 0 0 20px #d4af37, 0 0 50px #ff0000;
         }
         
-        .spell-incendio { text-shadow: 0 0 15px #ff6600, 0 0 30px #ff0000, 0 0 60px #8b0000; color: #fff0e0; }
-        .spell-glacius { text-shadow: 0 0 15px #00ffff, 0 0 30px #0088ff, 0 0 60px #00008b; color: #f0fbff; }
-        .spell-lumos { text-shadow: 0 0 15px #ffffff, 0 0 30px #ffffaa, 0 0 60px #d4af37; color: #ffffff; }
+        /* 咒语颜色 */
+        .spell-incendio { text-shadow: 0 0 15px #ff6600, 0 0 30px #ff0000; color: #fff0e0; }
+        .spell-glacius { text-shadow: 0 0 15px #00ffff, 0 0 30px #0088ff; color: #f0fbff; }
+        .spell-lumos { text-shadow: 0 0 15px #ffffff, 0 0 30px #ffffaa; color: #ffffff; }
+        .spell-stupefy { text-shadow: 0 0 15px #ff0000, 0 0 40px #ff0000; color: #ffebeb; }
+        .spell-aguamenti { text-shadow: 0 0 15px #0000ff, 0 0 30px #0088ff; color: #e0f0ff; }
+        .spell-patronus { text-shadow: 0 0 15px #cccccc, 0 0 30px #ffffff, 0 0 50px #88ccff; color: #ffffff; }
         
-        /* 圣诞彩蛋文字序列 */
         #christmas-message {
             position: absolute; top: 65%; width: 100%; text-align: center;
-            font-family: 'Great Vibes', cursive; font-size: 3rem; color: #ffebcd;
+            font-family: 'Great Vibes', cursive; font-size: 2.5rem; color: #ffebcd;
             text-shadow: 0 0 15px rgba(212, 175, 55, 0.8); opacity: 0;
             pointer-events: none; 
         }
@@ -127,28 +149,22 @@
         #loading {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             z-index: 100; text-align: center; color: #d4af37;
-            background: rgba(0,0,0,0.9); padding: 40px; border: 1px solid #d4af37;
+            background: rgba(0,0,0,0.9); padding: 30px; border: 1px solid #d4af37;
             box-shadow: 0 0 50px rgba(0,0,0,0.8);
-            border-radius: 4px; transition: opacity 0.5s;
+            border-radius: 4px; transition: opacity 0.5s; width: 80%;
         }
 
         .controls { pointer-events: auto; margin-bottom: 30px; display: flex; gap: 15px; }
 
         button {
             background: rgba(10,10,10,0.7); border: 1px solid #555; color: #888;
-            padding: 12px 30px; font-family: 'Cinzel', serif; font-size: 0.85rem;
+            padding: 10px 20px; font-family: 'Cinzel', serif; font-size: 0.8rem;
             cursor: pointer; transition: all 0.4s; text-transform: uppercase; letter-spacing: 2px;
             position: relative; overflow: hidden;
-        }
-        button::before {
-            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(212,175,55,0.2), transparent);
-            transition: 0.5s;
         }
         button:hover { 
             border-color: #d4af37; color: #d4af37; box-shadow: 0 0 25px rgba(212,175,55,0.15); 
         }
-        button:hover::before { left: 100%; }
 
         body.mouse-active { cursor: default; }
     </style>
@@ -164,18 +180,24 @@
 
     <div id="loading">
         <div style="font-size: 2.5rem; margin-bottom: 15px; animation: pulse 2s infinite;">✨</div>
-        <div id="loading-text">魔杖调谐中...</div>
-        <div style="font-size:0.8em; color:#888; margin-top:10px;">如果长时间无响应，请直接使用鼠标</div>
+        <div id="loading-text">魔杖核心调谐中...</div>
+        <div style="font-size:0.8em; color:#888; margin-top:10px;">如果是手机端，请允许摄像头权限</div>
     </div>
     
-    <video id="video-input" class="mirror-video" playsinline></video>
+    <video id="video-input" class="mirror-video" playsinline webkit-playsinline></video>
     <div id="canvas-container"></div>
     <div id="ui-frame"></div>
 
     <div id="ui-content">
         <div>
             <h1 onclick="SoundManager.playBGM()">Wand Master</h1>
-            <div class="subtitle">School of Witchcraft</div>
+            <div class="subtitle">Magic School</div>
+            
+            <div id="boss-hud">
+                <div id="boss-name">摄魂怪 (DEMENTOR)</div>
+                <div id="health-bar-frame"><div id="health-bar-fill"></div></div>
+            </div>
+
             <div id="instruction-box">
                 <div id="instruction">初始化中...</div>
             </div>
@@ -188,7 +210,7 @@
         <div id="christmas-message"></div>
 
         <div class="controls">
-            <button onclick="resetTutorial()">重修课程 (Reset)</button>
+            <button onclick="resetTutorial()">重置 (Reset)</button>
         </div>
     </div>
 
@@ -239,7 +261,17 @@
         };
 
         const CONFIG = { trailLength: 60, cameraZ: 14, wandBaseColor: 0xffaa00 };
-        const STATE = { INIT: 0, SPELL_LUMOS: 1, SPELL_INCENDIO: 2, SPELL_GLACIUS: 3, FREE_MODE: 4, CHRISTMAS: 5 };
+        const STATE = { 
+            INIT: 0, 
+            SPELL_LUMOS: 1, 
+            SPELL_INCENDIO: 2, 
+            SPELL_AGUAMENTI: 3, 
+            SPELL_GLACIUS: 4, 
+            SPELL_PATRONUS: 5,
+            COMBAT: 10,
+            FREE_MODE: 20, 
+            CHRISTMAS: 21 
+        };
 
         let currentState = STATE.INIT;
         let isHandDetected = false;
@@ -250,8 +282,7 @@
         let lastWandPosition = new THREE.Vector3();
         let targetPositions = [];
         
-        // 修复：添加丢失的 particleGroups 定义
-        const particleGroups = [];
+        const particleGroups = []; 
 
         const instructionEl = document.getElementById('instruction');
         const instructionBox = document.getElementById('instruction-box');
@@ -259,6 +290,8 @@
         const spellDisplayEl = document.getElementById('spell-cast-display');
         const spellTextInner = document.getElementById('spell-text-inner');
         const christmasMsgEl = document.getElementById('christmas-message');
+        const bossHud = document.getElementById('boss-hud');
+        const healthBarFill = document.getElementById('health-bar-fill');
 
         // Three.js Setup
         const container = document.getElementById('canvas-container');
@@ -268,23 +301,15 @@
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.z = CONFIG.cameraZ;
 
-        // WebGL Renderer with fallback logic
         let renderer;
         try {
             renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         } catch (err) {
-            console.warn("High-spec renderer failed, attempting low-spec fallback", err);
-            try {
-                renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false });
-            } catch (err2) {
-                console.error("WebGL completely failed", err2);
-                document.body.innerHTML = "<div style='color:#d4af37; text-align:center; padding-top:20%; font-family:serif;'><h1>魔法能量不足</h1><p>您的设备似乎不支持 WebGL (Magic Crystal Error)</p></div>";
-                throw err2;
-            }
+            try { renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false }); } catch (e) {}
         }
         
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for mobile perf
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         container.appendChild(renderer.domElement);
 
@@ -308,6 +333,10 @@
                 g.addColorStop(0.2, 'rgba(255, 255, 255, 0.8)');
                 g.addColorStop(0.6, 'rgba(255, 255, 255, 0.1)');
                 g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            } else if (type === 'smoke') {
+                g.addColorStop(0, 'rgba(50, 0, 80, 0.8)');
+                g.addColorStop(0.4, 'rgba(20, 0, 40, 0.2)');
+                g.addColorStop(1, 'rgba(0, 0, 0, 0)');
             }
             ctx.fillStyle = g; ctx.fillRect(0,0,64,64);
             const tex = new THREE.Texture(canvas); tex.needsUpdate = true; return tex;
@@ -315,6 +344,7 @@
 
         const texGlow = createTexture('glow');
         const texSpark = createTexture('spark');
+        const texSmoke = createTexture('smoke');
         
         const wandTip = new THREE.Sprite(new THREE.SpriteMaterial({ map: texGlow, color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending }));
         wandTip.scale.set(0.8, 0.8, 1);
@@ -354,8 +384,8 @@
             return group;
         }
 
-        // --- 核心：体积化小人生成器 ---
-        function getVolumetricPoints(scale = 1.0) {
+        // --- 核心：体积化小人/怪物生成器 ---
+        function getVolumetricPoints(scale = 1.0, isMonster = false, isStag = false) {
             const points = [];
             const addCloud = (center, rx, ry, rz, count) => {
                 for(let i=0; i<count; i++) {
@@ -370,19 +400,113 @@
                 }
             };
 
-            // Head
-            addCloud(new THREE.Vector3(0, 1.8, 0), 0.35, 0.4, 0.35, 150);
-            // Torso
-            addCloud(new THREE.Vector3(0, 0.5, 0), 0.5, 0.9, 0.3, 300);
-            // Arms
-            addCloud(new THREE.Vector3(-0.8, 0.8, 0), 0.2, 0.7, 0.2, 100);
-            addCloud(new THREE.Vector3(0.8, 0.8, 0), 0.2, 0.7, 0.2, 100);
-            // Legs
-            addCloud(new THREE.Vector3(-0.4, -1.2, 0), 0.25, 0.9, 0.25, 120);
-            addCloud(new THREE.Vector3(0.4, -1.2, 0), 0.25, 0.9, 0.25, 120);
-
+            if (isMonster) {
+                // 摄魂怪
+                addCloud(new THREE.Vector3(0, 3, 0), 1.2, 1.2, 1.2, 400); // Hood
+                addCloud(new THREE.Vector3(0, 0, 0), 0.8, 2.5, 0.8, 600); // Body
+                addCloud(new THREE.Vector3(-1.5, 1.5, 0.5), 0.5, 1.0, 0.5, 200); // L Arm
+                addCloud(new THREE.Vector3(1.5, 1.5, 0.5), 0.5, 1.0, 0.5, 200); // R Arm
+            } else if (isStag) {
+                // 守护神 (鹿)
+                addCloud(new THREE.Vector3(0, 0, 0), 0.8, 0.8, 1.5, 400); // Body
+                addCloud(new THREE.Vector3(0, 1.5, 1.2), 0.5, 0.6, 0.5, 200); // Head
+                addCloud(new THREE.Vector3(0, 2.5, 1.2), 1.2, 0.5, 0.1, 100); // Antlers
+                addCloud(new THREE.Vector3(-0.5, -1.5, 1.2), 0.2, 1.0, 0.2, 100); // FL Leg
+                addCloud(new THREE.Vector3(0.5, -1.5, 1.2), 0.2, 1.0, 0.2, 100); // FR Leg
+                addCloud(new THREE.Vector3(-0.5, -1.5, -1.2), 0.2, 1.0, 0.2, 100); // BL Leg
+                addCloud(new THREE.Vector3(0.5, -1.5, -1.2), 0.2, 1.0, 0.2, 100); // BR Leg
+            } else {
+                // Humanoid
+                addCloud(new THREE.Vector3(0, 1.8, 0), 0.35, 0.4, 0.35, 100);
+                addCloud(new THREE.Vector3(0, 0.5, 0), 0.5, 0.9, 0.3, 200);
+                addCloud(new THREE.Vector3(-0.8, 0.8, 0), 0.2, 0.7, 0.2, 80);
+                addCloud(new THREE.Vector3(0.8, 0.8, 0), 0.2, 0.7, 0.2, 80);
+                addCloud(new THREE.Vector3(-0.4, -1.2, 0), 0.25, 0.9, 0.25, 80);
+                addCloud(new THREE.Vector3(0.4, -1.2, 0), 0.25, 0.9, 0.25, 80);
+            }
             return points.map(p => p.multiplyScalar(scale));
         }
+
+        // 黑暗生物 Boss 类
+        class DarkCreature {
+            constructor() {
+                this.group = new THREE.Group();
+                scene.add(this.group);
+                this.group.position.set(0, 1, -5); 
+                
+                const points = getVolumetricPoints(1.2, true);
+                const geo = new THREE.BufferGeometry();
+                const positions = []; 
+                points.forEach(p => positions.push(p.x, p.y, p.z));
+                geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                
+                const mat = new THREE.PointsMaterial({ 
+                    color: 0x220044, size: 0.3, transparent: true, opacity: 0.6,
+                    map: texSmoke, blending: THREE.AdditiveBlending, depthWrite: false 
+                });
+                
+                this.mesh = new THREE.Points(geo, mat);
+                this.group.add(this.mesh);
+                
+                this.health = 100;
+                this.maxHealth = 100;
+                this.active = false;
+                this.floatOffset = 0;
+            }
+            
+            spawn() {
+                this.active = true;
+                this.health = 100;
+                this.group.visible = true;
+                this.group.scale.set(0,0,0);
+                gsap.to(this.group.scale, {x: 1, y: 1, z: 1, duration: 2});
+                bossHud.style.opacity = 1;
+                healthBarFill.style.width = '100%';
+            }
+            
+            takeDamage(amount) {
+                if(!this.active) return;
+                this.health -= amount;
+                healthBarFill.style.width = (this.health / this.maxHealth * 100) + '%';
+                
+                // 受击反馈
+                gsap.to(this.group.position, {z: -6, duration: 0.1, yoyo: true, repeat: 1});
+                this.mesh.material.color.setHex(0xff0000); 
+                setTimeout(() => this.mesh.material.color.setHex(0x220044), 200);
+                
+                spawnEffect('gold', this.group.position, 2); 
+
+                if (this.health <= 0) this.die();
+            }
+            
+            die() {
+                this.active = false;
+                bossHud.style.opacity = 0;
+                gsap.to(this.group.scale, {x: 2, y: 2, z: 2, duration: 0.8, opacity: 0});
+                spawnEffect('lumos', this.group.position, 5); // 光爆
+                setTimeout(() => { 
+                    this.group.visible = false; 
+                    handleLevelComplete(); // 击败后进入下一阶段
+                }, 1500);
+            }
+            
+            update() {
+                if(!this.active) return;
+                this.floatOffset += 0.02;
+                this.group.position.y = 1 + Math.sin(this.floatOffset) * 0.5;
+                this.group.rotation.y = Math.sin(this.floatOffset * 0.5) * 0.2;
+                
+                const pos = this.mesh.geometry.attributes.position.array;
+                for(let i=0; i<pos.length; i+=3) {
+                    pos[i] += (Math.random()-0.5)*0.02;
+                    pos[i+1] += (Math.random()-0.5)*0.02;
+                    pos[i+2] += (Math.random()-0.5)*0.02;
+                }
+                this.mesh.geometry.attributes.position.needsUpdate = true;
+            }
+        }
+        
+        const darkCreature = new DarkCreature();
 
         class MagicDummy {
             constructor(pos, type) {
@@ -390,180 +514,120 @@
                 this.mesh = new THREE.Group(); scene.add(this.mesh);
                 this.mesh.position.copy(pos);
                 
+                let isStag = (type === 'patronus');
                 const geo = new THREE.BufferGeometry();
-                const targetPoints = getVolumetricPoints(1.6); // 稍微大一点
+                const targetPoints = getVolumetricPoints(1.5, false, isStag); 
                 const positions = []; const velocities = []; const lifetimes = []; const initialPos = [];
                 
-                this.state = 'forming'; 
-                this.timer = 0;
-
+                this.state = 'forming'; this.timer = 0;
                 let color = new THREE.Color(0xffffff);
                 if (type === 'fire') color.setHex(0xffaa00);
                 if (type === 'ice') color.setHex(0xaaffff);
+                if (type === 'patronus') color.setHex(0xaaaaff);
 
                 targetPoints.forEach(p => {
-                    // Start dispersed
-                    const sx = p.x + (Math.random()-0.5)*8;
-                    const sy = p.y + (Math.random()-0.5)*8;
-                    const sz = p.z + (Math.random()-0.5)*8;
+                    const sx = p.x + (Math.random()-0.5)*10;
+                    const sy = p.y + (Math.random()-0.5)*10;
+                    const sz = p.z + (Math.random()-0.5)*10;
                     positions.push(sx, sy, sz);
-                    initialPos.push(p.x, p.y, p.z); // Store target
-                    // Velocity used for noise later
+                    initialPos.push(p.x, p.y, p.z);
                     velocities.push(Math.random(), Math.random(), Math.random());
                     lifetimes.push(1.0);
                 });
 
                 geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-                // Store original targets in custom attribute for easy access? 
-                // Simplified: recalculate from velocities or separate array not possible directly in buffergeo without custom attrs
-                // We use JS array update for CPU particles
-                this.targets = initialPos;
-                this.velocities = velocities;
-                this.lifetimes = lifetimes;
-
+                this.targets = initialPos; this.lifetimes = lifetimes;
                 const mat = new THREE.PointsMaterial({ color: color, size: 0.15, transparent: true, map: texSpark, blending: THREE.AdditiveBlending, depthWrite: false });
                 this.points = new THREE.Points(geo, mat);
-                this.mesh.add(this.points);
-                this.geometry = geo;
+                this.mesh.add(this.points); this.geometry = geo;
             }
 
             update() {
                 if(!this.active) return;
-                this.timer += 0.016;
+                this.timer += 0.02; // Speed up
                 const pos = this.geometry.attributes.position.array;
                 
                 if (this.state === 'forming') {
-                    // Swirl towards target shape
-                    let formed = true;
+                    let done = true;
                     for(let i=0; i<pos.length; i+=3) {
-                        const tx = this.targets[i];
-                        const ty = this.targets[i+1];
-                        const tz = this.targets[i+2];
-                        
-                        pos[i] += (tx - pos[i]) * 0.08;
-                        pos[i+1] += (ty - pos[i+1]) * 0.08;
-                        pos[i+2] += (tz - pos[i+2]) * 0.08;
-                        
-                        if(Math.abs(tx - pos[i]) > 0.2) formed = false;
+                        pos[i] += (this.targets[i] - pos[i]) * 0.1;
+                        pos[i+1] += (this.targets[i+1] - pos[i+1]) * 0.1;
+                        pos[i+2] += (this.targets[i+2] - pos[i+2]) * 0.1;
+                        if(Math.abs(pos[i]-this.targets[i]) > 0.1) done = false;
                     }
-                    if(this.timer > 1.2) {
-                        this.state = 'acting';
-                        this.timer = 0; // Reset timer for action phase
-                    }
+                    if(this.timer > 1.0) { this.state = 'acting'; this.timer = 0; }
                 } else if (this.state === 'acting') {
                     if (this.type === 'fire') {
-                        // 燃烧物理：核心金黄，外围红黑，向上湍流
-                        this.points.material.color.lerp(new THREE.Color(0xff4500), 0.01);
-                        this.points.material.size *= 0.995;
-                        
+                        this.points.material.color.lerp(new THREE.Color(0xff4500), 0.02);
+                        this.points.material.size *= 0.99;
                         for(let i=0; i<pos.length; i+=3) {
-                            const noiseX = Math.sin(this.timer * 5 + pos[i+1]) * 0.05; // Wind wiggle
-                            pos[i] += noiseX + (Math.random()-0.5)*0.02;
-                            pos[i+1] += 0.03 + Math.random()*0.08; // Convection Up
-                            pos[i+2] += (Math.random()-0.5)*0.02;
-                            
-                            // Fade out
-                            this.lifetimes[i/3] -= 0.01;
+                            pos[i] += Math.sin(this.timer * 5 + pos[i+1]) * 0.05 + (Math.random()-0.5)*0.02;
+                            pos[i+1] += 0.05 + Math.random()*0.05;
+                            this.lifetimes[i/3] -= 0.02;
                             if(this.lifetimes[i/3] < 0) pos[i] = 9999;
                         }
                     } else if (this.type === 'ice') {
-                        // 冰封物理：先静止(结晶)，然后重力碎裂
-                        if (this.timer < 1.0) {
-                             // Crystallize phase: bright flash, no movement
-                             this.points.material.color.lerp(new THREE.Color(0xffffff), 0.2);
-                             // Minimal jitter
-                             for(let i=0; i<pos.length; i+=3) {
-                                 pos[i] += (Math.random()-0.5)*0.005;
-                             }
+                        if (this.timer < 0.5) {
+                             this.points.material.color.lerp(new THREE.Color(0xffffff), 0.3);
                         } else {
-                            // Shatter phase
-                            this.points.material.color.lerp(new THREE.Color(0x0088aa), 0.05);
-                            this.points.material.size = 0.2;
+                            this.points.material.color.lerp(new THREE.Color(0x0088aa), 0.1);
                             for(let i=0; i<pos.length; i+=3) {
-                                // Explode outwards from center of dummy
-                                const dx = pos[i];
-                                const dy = pos[i+1];
-                                const dz = pos[i+2];
-                                
-                                pos[i] += dx * 0.05;
-                                pos[i+1] += dy * 0.05 - 0.15; // Heavy Gravity
-                                pos[i+2] += dz * 0.05;
-                                
-                                // Floor collision
-                                if (pos[i+1] < -5) {
-                                    pos[i+1] = -5;
-                                    pos[i] += (Math.random()-0.5)*0.1; // Slide
-                                }
-                                
-                                this.lifetimes[i/3] -= 0.005;
+                                pos[i] += pos[i] * 0.08;
+                                pos[i+1] += pos[i+1] * 0.08 - 0.2;
+                                pos[i+2] += pos[i+2] * 0.08;
+                                if (pos[i+1] < -5) { pos[i+1] = -5; pos[i] += (Math.random()-0.5)*0.2; }
+                                this.lifetimes[i/3] -= 0.02;
                                 if(this.lifetimes[i/3] < 0) pos[i] = 9999;
                             }
                         }
+                    } else if (this.type === 'patronus') {
+                        // 守护神：原地漂浮，银光闪烁
+                        this.points.material.color.lerp(new THREE.Color(0xffffff), 0.05);
+                        for(let i=0; i<pos.length; i+=3) {
+                            pos[i] += (Math.random()-0.5)*0.02;
+                            pos[i+1] += Math.sin(this.timer*2 + pos[i])*0.01;
+                        }
+                        // 存在久一点
+                        if (this.timer > 3.0) this.points.material.opacity *= 0.95;
                     }
                 }
-
                 this.geometry.attributes.position.needsUpdate = true;
-                if (this.timer > 4.5) { this.active = false; scene.remove(this.mesh); }
+                if (this.timer > 3.5 || this.points.material.opacity < 0.01) { this.active = false; scene.remove(this.mesh); }
             }
         }
 
         class ChristmasTree {
             constructor() {
-                this.group = new THREE.Group();
-                scene.add(this.group);
-                
-                const particleCount = 4000;
-                const geo = new THREE.BufferGeometry();
-                const positions = []; const colors = [];
-                const colorObj = new THREE.Color();
-                
+                this.group = new THREE.Group(); scene.add(this.group);
+                const particleCount = 4000; const geo = new THREE.BufferGeometry();
+                const positions = []; const colors = []; const colorObj = new THREE.Color();
                 for(let i=0; i<particleCount; i++){
-                    const t = i / particleCount;
-                    const angle = t * Math.PI * 24; 
-                    const radius = (1-t) * 8;
-                    const y = t * 18 - 9;
-                    const x = Math.cos(angle) * radius;
-                    const z = Math.sin(angle) * radius;
-                    
+                    const t = i / particleCount; const angle = t * Math.PI * 24; const radius = (1-t) * 8;
+                    const y = t * 18 - 9; const x = Math.cos(angle) * radius; const z = Math.sin(angle) * radius;
                     positions.push(x, y, z);
-                    
                     if(Math.random() > 0.8) colorObj.setHex(0xff0000); 
                     else if (Math.random() > 0.85) colorObj.setHex(0xffd700); 
                     else colorObj.setHex(0x0f550f); 
-                    
                     colors.push(colorObj.r, colorObj.g, colorObj.b);
                 }
-                
                 geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
                 geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-                
                 const mat = new THREE.PointsMaterial({ size: 0.22, vertexColors: true, blending: THREE.AdditiveBlending, depthWrite: false, map: texGlow, transparent: true });
-                this.tree = new THREE.Points(geo, mat);
-                this.group.add(this.tree);
-
-                const starGeo = new THREE.OctahedronGeometry(1.5, 0);
-                const starMat = new THREE.MeshBasicMaterial({ color: 0xffd700, wireframe: true });
-                this.star = new THREE.Mesh(starGeo, starMat);
-                this.star.position.y = 9.5;
-                this.group.add(this.star);
-                
-                this.group.visible = false;
-                this.group.scale.set(0,0,0);
+                this.tree = new THREE.Points(geo, mat); this.group.add(this.tree);
+                const starGeo = new THREE.OctahedronGeometry(1.5, 0); const starMat = new THREE.MeshBasicMaterial({ color: 0xffd700, wireframe: true });
+                this.star = new THREE.Mesh(starGeo, starMat); this.star.position.y = 9.5; this.group.add(this.star);
+                this.group.visible = false; this.group.scale.set(0,0,0);
             }
-            
             show() {
                 this.group.visible = true;
                 gsap.to(this.group.scale, {x: 1, y: 1, z: 1, duration: 5, ease: "elastic.out(1, 0.4)"});
                 gsap.to(this.group.rotation, {y: Math.PI*4, duration: 40, repeat: -1, ease: "none"});
             }
-            
             update() {
                 if(!this.group.visible) return;
-                this.star.rotation.y -= 0.02;
-                this.star.scale.setScalar(1 + Math.sin(Date.now()*0.003)*0.2);
+                this.star.rotation.y -= 0.02; this.star.scale.setScalar(1 + Math.sin(Date.now()*0.003)*0.2);
             }
         }
-        
         const christmasTree = new ChristmasTree();
 
         class ParticleSystem {
@@ -575,11 +639,15 @@
                 let color = new THREE.Color(0xffffff); let sizeBase = 0.2;
                 if (type === 'lumos') { color.setHex(0xffffee); sizeBase = 0.8; }
                 else if (type === 'gold') { color.setHex(0xffd700); sizeBase = 0.2; }
+                else if (type === 'attack') { color.setHex(0xff0000); sizeBase = 0.4; } 
+                else if (type === 'water') { color.setHex(0x4488ff); sizeBase = 0.3; }
                 
                 const mat = new THREE.PointsMaterial({ color: color, size: sizeBase, transparent: true, map: texSpark, blending: THREE.AdditiveBlending, depthWrite: false });
                 for(let i=0; i<count; i++) {
                     positions.push(pos.x + (Math.random()-0.5)*0.5, pos.y + (Math.random()-0.5)*0.5, pos.z + (Math.random()-0.5)*0.5);
                     this.velocities.push((Math.random()-0.5)*0.3, (Math.random()-0.5)*0.3, (Math.random()-0.5)*0.3);
+                    if(type==='attack') this.velocities[this.velocities.length-1] = -0.8; 
+                    if(type==='water') { this.velocities[this.velocities.length-2] = 0.2; } // Up arc
                     this.lifetimes.push(1.0 + Math.random());
                 }
                 geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -592,7 +660,9 @@
                     if (this.lifetimes[i] > 0) {
                         alive++; const idx = i*3;
                         pos[idx] += this.velocities[idx]; pos[idx+1] += this.velocities[idx+1]; pos[idx+2] += this.velocities[idx+2];
-                        this.lifetimes[i] -= 0.015;
+                        if(this.type === 'attack') pos[idx+2] -= 0.5;
+                        if(this.type === 'water') { this.velocities[idx+1] -= 0.015; } // Gravity
+                        this.lifetimes[i] -= 0.02;
                     } else pos[i*3] = 9999;
                 }
                 this.geometry.attributes.position.needsUpdate = true;
@@ -601,7 +671,6 @@
             }
         }
 
-        // 星空
         function createStarField() {
             const count = 1000; const geo = new THREE.BufferGeometry(); const pos = []; const sizes = [];
             for(let i=0; i<count; i++) {
@@ -619,14 +688,14 @@
             gsap.to(stars.rotation, {z: 0.2, duration: 60, yoyo: true, repeat: -1, ease: "sine.inOut"});
         }
 
-        // 逻辑
         function spawnEffect(type, pos, scale = 1) { 
-            if(type === 'fire' || type === 'ice') {
+            if(type === 'fire' || type === 'ice' || type === 'patronus') {
                 particleGroups.push(new MagicDummy(pos, type));
             } else {
                 particleGroups.push(new ParticleSystem(pos, type, 50 * scale)); 
             }
         }
+        
         function screenShake() {
             const el = document.getElementById('canvas-container');
             gsap.to(el, {x: 5, duration: 0.05, yoyo: true, repeat: 5});
@@ -638,14 +707,11 @@
             let coords = [];
             if (type === 'lumos') coords = [[0,0]];
             else if (type === 'incendio') coords = [[0, 3], [-2.5, -2], [2.5, -2], [0, 3]];
-            else if (type === 'glacius') coords = [[0, 3.5], [2.5, 0], [0, -3.5], [-2.5, 0], [0, 3.5]];
-            else if (type === 'summer') {
-                coords = [
-                    [-6, 1], [-5, 2], [-4, 1], [-5, 0], [-6, -1], [-5, -2], // S
-                    [-3, 0], [-2, -2], [-1, 0], // U
-                    [0, 0], [1, -2], [2, 0], [3, -2], [4, 0] // M
-                ];
-            }
+            else if (type === 'aguamenti') coords = [[-2, 0], [-1, 1], [0, 0], [1, 1], [2, 0]]; // Wave
+            else if (type === 'glacius') coords = [[-2, 2], [2, 2], [2, -2], [-2, -2], [-2, 2]]; // Square
+            else if (type === 'patronus') coords = [[0, 3], [2.5, 0], [0, -3], [-2.5, 0], [0, 3]]; // Circle
+            else if (type === 'stupefy') coords = [[-2, 3], [2, 0], [-2, 0], [2, -3]]; // Bolt
+            else if (type === 'summer') coords = [ [-6, 1], [-5, 2], [-4, 1], [-5, 0], [-6, -1], [-5, -2], [-3, 0], [-2, -2], [-1, 0], [0, 0], [1, -2], [2, 0], [3, -2], [4, 0] ];
 
             if (coords.length > 1) {
                 const points = coords.map(c => new THREE.Vector3(c[0], c[1], 0));
@@ -655,9 +721,11 @@
             }
 
             let uniquePoints = coords;
-            if (type !== 'summer' && coords.length > 1 && coords[0][0] === coords[coords.length-1][0] && coords[0][1] === coords[coords.length-1][1]) {
+            // Handle closed shapes (don't duplicate last point if it matches first)
+            if (type !== 'summer' && type !== 'aguamenti' && type !== 'stupefy' && coords.length > 1 && coords[0][0] === coords[coords.length-1][0] && coords[0][1] === coords[coords.length-1][1]) {
                 uniquePoints = coords.slice(0, coords.length - 1);
             }
+            if(type === 'lumos') uniquePoints.length = 1;
 
             uniquePoints.forEach((p, index) => {
                 const t = createTargetPoint(p[0], p[1]);
@@ -665,33 +733,52 @@
                 if (index === 0) {
                     t.children[0].material.color.setHex(0xffaa00);
                     t.children[0].material.opacity = 0.8;
-                    gsap.to(t.scale, {x: 2.5, y: 2.5, duration: 0.8, yoyo: true, repeat: -1, ease: "sine.inOut"}); 
+                    gsap.to(t.scale, {x: 2.0, y: 2.0, duration: 0.6, yoyo: true, repeat: -1, ease: "sine.inOut"}); 
                 }
             });
         }
 
         function triggerShowcase(spellType) {
             isCastingEffect = true; SoundManager.playSuccess(spellType); screenShake();
-            gsap.to(connectionLine?.material || {}, {opacity: 0, duration: 0.5});
+            gsap.to(connectionLine?.material || {}, {opacity: 0, duration: 0.3});
             instructionBox.style.opacity = 0;
             
-            // 生成魔法小人
+            if (currentState === STATE.COMBAT) {
+                spawnEffect('attack', wandPosition); 
+                setTimeout(() => darkCreature.takeDamage(34), 300); 
+                setTimeout(() => { 
+                    if(darkCreature.active) {
+                        isCastingEffect = false; 
+                        instructionBox.style.opacity = 1;
+                        setTutorialPoints('stupefy'); 
+                    }
+                }, 1000); // 战斗节奏更快
+                return;
+            }
+
             if (spellType === 'fire') {
                 spawnEffect('fire', new THREE.Vector3(0, -1, 0));
-                setTimeout(() => { gsap.to(mainLight, {intensity: 6, color: 0xff4400, duration: 0.5, yoyo: true, repeat: 3}); }, 1200);
+                gsap.to(mainLight, {intensity: 6, color: 0xff4400, duration: 0.5, yoyo: true, repeat: 3});
             } else if (spellType === 'ice') {
                 spawnEffect('ice', new THREE.Vector3(0, -1, 0));
-                setTimeout(() => { gsap.to(mainLight, {intensity: 4, color: 0x00ffff, duration: 0.5, yoyo: true, repeat: 1}); }, 1200);
+                gsap.to(mainLight, {intensity: 4, color: 0x00ffff, duration: 0.5, yoyo: true, repeat: 1});
+            } else if (spellType === 'water') {
+                for(let i=0; i<10; i++) setTimeout(()=>spawnEffect('water', new THREE.Vector3((Math.random()-0.5)*2, 0, 0)), i*100);
+            } else if (spellType === 'patronus') {
+                spawnEffect('patronus', new THREE.Vector3(0, -1, 0));
+                gsap.to(mainLight, {intensity: 5, color: 0xaaaaff, duration: 1});
             } else if (spellType === 'lumos') {
                 spawnEffect('lumos', new THREE.Vector3(0,0,0), 3);
                 gsap.to(mainLight, {intensity: 8, color: 0xffaa00, duration: 0.3, yoyo: true, repeat: 1});
             }
 
-            setTimeout(() => { isCastingEffect = false; instructionBox.style.opacity = 1; handleLevelComplete(); }, 5000);
+            // 缩短展示时间到 2.5秒
+            setTimeout(() => { isCastingEffect = false; instructionBox.style.opacity = 1; handleLevelComplete(); }, 2500);
         }
 
         function checkGameLogic() {
             if (isCastingEffect) return;
+            // 混合输入：优先手势，其次鼠标（且鼠标最近有移动）
             const useMouse = !isHandDetected && (Date.now() - lastMouseMoveTime < 3000);
             if (!isHandDetected && !useMouse) return;
 
@@ -703,10 +790,10 @@
                 if (currentState === STATE.INIT) hitRadius = 1.5;
 
                 if (dist < hitRadius) {
-                    const hitColor = currentState === STATE.SPELL_INCENDIO ? 0xff4500 : (currentState === STATE.SPELL_GLACIUS ? 0x00ffff : 0xffd700);
+                    // Hit feedback
                     target.children[1].material.opacity = 1;
-                    target.children[1].material.color.setHex(hitColor);
-                    target.children[0].material.color.setHex(hitColor);
+                    target.children[1].material.color.setHex(0xffffff);
+                    target.children[0].material.color.setHex(0xffffff);
                     gsap.killTweensOf(target.scale); target.scale.set(1, 1, 1);
                     gsap.to(target.scale, {x: 1.8, y: 1.8, duration: 0.2, yoyo: true, repeat: 1});
                     spawnEffect('gold', target.position, 0.5);
@@ -717,20 +804,27 @@
                         const nextT = activeTargets[currentTargetIndex];
                         nextT.children[0].material.color.setHex(0xffaa00);
                         nextT.children[0].material.opacity = 0.8;
-                        gsap.to(nextT.scale, {x: 1.5, y: 1.5, duration: 0.6, yoyo: true, repeat: -1});
+                        gsap.to(nextT.scale, {x: 2.0, y: 2.0, duration: 0.6, yoyo: true, repeat: -1});
                     } else {
+                        // Complete
                         let type = 'lumos';
                         if (currentState === STATE.SPELL_INCENDIO) type = 'fire';
+                        if (currentState === STATE.SPELL_AGUAMENTI) type = 'water';
                         if (currentState === STATE.SPELL_GLACIUS) type = 'ice';
+                        if (currentState === STATE.SPELL_PATRONUS) type = 'patronus';
+                        if (currentState === STATE.COMBAT) type = 'stupefy';
                         
                         let name = "LUMOS";
                         if (currentState === STATE.SPELL_INCENDIO) name = "INCENDIO";
+                        if (currentState === STATE.SPELL_AGUAMENTI) name = "AGUAMENTI";
                         if (currentState === STATE.SPELL_GLACIUS) name = "GLACIUS";
+                        if (currentState === STATE.SPELL_PATRONUS) name = "EXPECTO PATRONUM";
+                        if (currentState === STATE.COMBAT) name = "STUPEFY";
 
                         spellTextInner.innerText = name;
-                        spellTextInner.className = "spell-text " + (type === 'fire' ? 'spell-incendio' : (type === 'ice' ? 'spell-glacius' : 'spell-lumos'));
+                        spellTextInner.className = "spell-text spell-" + type;
                         spellDisplayEl.style.opacity = 1; spellDisplayEl.style.transform = "scale(1.2)";
-                        setTimeout(() => { spellDisplayEl.style.opacity = 0; spellDisplayEl.style.transform = "scale(0.5)"; }, 3000);
+                        setTimeout(() => { spellDisplayEl.style.opacity = 0; spellDisplayEl.style.transform = "scale(0.5)"; }, 2000);
 
                         if (currentState === STATE.FREE_MODE) triggerChristmasMode();
                         else triggerShowcase(type);
@@ -747,14 +841,36 @@
                 trailUniforms.uColor.value.setHex(0xff8800); setTutorialPoints('incendio');
             } 
             else if (currentState === STATE.SPELL_INCENDIO) {
+                currentState = STATE.SPELL_AGUAMENTI;
+                instructionEl.innerHTML = "画出 <span class='highlight'>波浪线</span> 释放 <b>清水如泉 (Aguamenti)</b>";
+                trailUniforms.uColor.value.setHex(0x4488ff); setTutorialPoints('aguamenti');
+            }
+            else if (currentState === STATE.SPELL_AGUAMENTI) {
                 currentState = STATE.SPELL_GLACIUS;
-                instructionEl.innerHTML = "顺时针画出 <span class='highlight'>菱形</span> 释放 <b>冰冻咒 (Glacius)</b>";
+                instructionEl.innerHTML = "画出 <span class='highlight'>正方形</span> 释放 <b>冰冻咒 (Glacius)</b>";
                 trailUniforms.uColor.value.setHex(0x00ffff); setTutorialPoints('glacius');
             }
             else if (currentState === STATE.SPELL_GLACIUS) {
-                currentState = STATE.FREE_MODE;
-                instructionEl.innerHTML = "终极考验<br>书写 <span class='highlight'>'summer'</span> 唤醒节日奇迹";
-                trailUniforms.uColor.value.setHex(0xffffff); setTutorialPoints('summer');
+                currentState = STATE.SPELL_PATRONUS;
+                instructionEl.innerHTML = "画出 <span class='highlight'>圆形</span> 呼唤 <b>守护神 (Expecto Patronum)</b>";
+                trailUniforms.uColor.value.setHex(0xaaaaff); setTutorialPoints('patronus');
+            }
+            else if (currentState === STATE.SPELL_PATRONUS) {
+                currentState = STATE.COMBAT;
+                instructionEl.innerHTML = "<span class='danger'>警告：摄魂怪来袭！</span><br>画出 <span class='highlight'>闪电</span> 施放昏昏倒地！";
+                trailUniforms.uColor.value.setHex(0xff0000); 
+                darkCreature.spawn();
+                setTutorialPoints('stupefy');
+            }
+            else if (currentState === STATE.COMBAT) {
+                if(!darkCreature.active) {
+                    currentState = STATE.FREE_MODE;
+                    instructionEl.innerHTML = "终极考验<br>书写 <span class='highlight'>'summer'</span> 唤醒节日奇迹";
+                    trailUniforms.uColor.value.setHex(0xffffff); setTutorialPoints('summer');
+                }
+            }
+            else if (currentState === STATE.FREE_MODE) {
+                // Keep
             }
         }
 
@@ -762,7 +878,7 @@
         function triggerChristmasMode() {
             if (currentState === STATE.CHRISTMAS) return; currentState = STATE.CHRISTMAS; isCastingEffect = true;
             SoundManager.playSuccess('christmas');
-            instructionEl.innerHTML = "✨ 愿爱与魔法常伴 ✨";
+            instructionEl.innerHTML = "✨ 愿魔法温暖你的冬日 ✨";
             
             gsap.to(connectionLine?.material || {}, {opacity: 0, duration: 0.5});
             spellDisplayEl.style.opacity = 0;
@@ -794,6 +910,8 @@
             currentState = STATE.INIT; isCastingEffect = false;
             if(christmasTextSprite) { scene.remove(christmasTextSprite); christmasTextSprite = null; }
             christmasTree.group.visible = false;
+            darkCreature.active = false; darkCreature.group.visible = false; bossHud.style.opacity = 0;
+            
             instructionEl.innerHTML = "移动光点 <span class='highlight'>触碰中心光球</span> 以开始";
             trailUniforms.uColor.value.setHex(CONFIG.wandBaseColor);
             setTutorialPoints('lumos');
@@ -826,6 +944,7 @@
             
             particleGroups.forEach(p => p.update());
             christmasTree.update();
+            darkCreature.update();
             renderer.render(scene, camera);
         }
 
@@ -842,6 +961,7 @@
         });
         
         window.addEventListener('touchmove', e => { 
+            e.preventDefault(); // 阻止滚动
             lastMouseMoveTime = Date.now();
             onInputMove(e.touches[0].clientX/window.innerWidth, e.touches[0].clientY/window.innerHeight);
         }, {passive: false});
@@ -866,8 +986,18 @@
             } else isHandDetected = false;
         });
 
-        const cameraUtils = new Camera(videoElement, { onFrame: async () => { await hands.send({image: videoElement}); }, width: 1280, height: 720 });
-        cameraUtils.start().catch((err) => { console.warn("Cam Init Failed", err); document.getElementById('loading-text').innerHTML = "摄像头启动失败，已切换至鼠标模式"; });
+        // 移动端优化：降低分辨率以提高性能
+        const isMobile = window.innerWidth < 768;
+        const cameraUtils = new Camera(videoElement, { 
+            onFrame: async () => { await hands.send({image: videoElement}); }, 
+            width: isMobile ? 640 : 1280, 
+            height: isMobile ? 480 : 720,
+            facingMode: 'user' // 强制前置
+        });
+        cameraUtils.start().catch((err) => { 
+            console.warn("Cam Init Failed", err); 
+            document.getElementById('loading-text').innerHTML = "摄像头启动失败，已切换至鼠标模式"; 
+        });
 
         createStarField();
         resetTutorial();
