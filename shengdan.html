@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Merry Christmas - Candy & Fix</title>
+    <title>Merry Christmas - Touch Fixed</title>
     <style>
         body { 
             margin: 0; overflow: hidden; 
@@ -130,7 +130,7 @@
     <div id="view-overlay"><div class="close-hint">Tap anywhere to close</div></div>
 
     <audio id="bgm" loop>
-        <source src="https://voca.ro/1joGv3iBg0Y8" type="audio/mpeg">
+        <source src="https://media.vocaroo.com/mp3/1joGv3iBg0Y8" type="audio/mpeg">
     </audio>
 
     <script type="module">
@@ -168,7 +168,9 @@
             targetRotation: { x: 0, y: 0 },
             viewRotation: { x: 0, y: 0 },
             isDragging: false, 
-            lastTouch: { x: 0, y: 0 }, 
+            // 交互坐标记录
+            startX: 0, startY: 0,
+            lastX: 0, lastY: 0,
             touchStartTime: 0,
             snowEnabled: true,
             isPaused: false
@@ -182,7 +184,7 @@
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
         let audioCtx;
-        let caneTexture; // 新增：拐杖糖纹理
+        let caneTexture; 
         const occupiedSpace = [];
 
         async function loadFonts() {
@@ -200,7 +202,7 @@
             document.getElementById('loader-text').style.opacity = 0;
             initThree(); 
             setupEnvironment(); 
-            createCaneTexture(); // 1. 生成纹理
+            createCaneTexture(); 
             createParticles(); 
             createSnow();     
             loadPreloadedPhotos(); loadPoems();
@@ -558,9 +560,13 @@
                 updateCameraPosition();
                 renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
             });
+            // 绑定到 document 以确保事件不被遮挡
+            // 使用 passive: false 以便我们可以调用 preventDefault
             document.addEventListener('touchstart', onTouchStart, {passive: false}); 
             document.addEventListener('touchmove', onTouchMove, {passive: false}); 
             document.addEventListener('touchend', onTouchEnd, {passive: false});
+            
+            // 鼠标事件保持不变
             document.addEventListener('mousedown', onMouseDown); 
             document.addEventListener('mousemove', onMouseMove); 
             document.addEventListener('mouseup', onMouseUp);
@@ -584,32 +590,71 @@
             });
         }
 
-        function onTouchStart(e) { 
-            // 修复：触摸按钮时不触发场景旋转
-            if (e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
-            handleStart(e.touches ? e.touches[0].clientX : e.clientX, e.touches ? e.touches[0].clientY : e.clientY); 
-        }
-        function onMouseDown(e) { 
-            if (e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
-            handleStart(e.clientX, e.clientY); 
-        }
-        function handleStart(x, y) { STATE.isDragging = true; STATE.lastTouch.x = x; STATE.lastTouch.y = y; STATE.touchStartTime = Date.now(); }
-        
-        function onTouchMove(e) { 
-            // 修复：只在 canvas 上阻止默认滚动，允许 UI 交互
-            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') { 
-                if(e.cancelable) e.preventDefault(); 
+        // ==========================================
+        // 🔧 核心修复：重写触摸逻辑，确保点击有效且不冲突
+        // ==========================================
+
+        function onTouchStart(e) {
+            // 如果点在按钮上，允许默认行为，不拦截
+            if (e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') {
+                return;
             }
-            handleMove(e.touches ? e.touches[0].clientX : e.clientX, e.touches ? e.touches[0].clientY : e.clientY); 
+            // 记录初始位置
+            const t = e.touches[0];
+            STATE.startX = t.clientX;
+            STATE.startY = t.clientY;
+            STATE.lastX = t.clientX;
+            STATE.lastY = t.clientY;
+            STATE.touchStartTime = Date.now();
+            STATE.isDragging = false; // 初始假设为点击，直到移动超过阈值
         }
-        function onMouseMove(e) { if(e.buttons === 0) { STATE.isDragging=false; return;} handleMove(e.clientX, e.clientY); }
-        
-        function handleMove(x, y) {
-            if (!STATE.isDragging) return;
-            const deltaX = x - STATE.lastTouch.x; 
-            const deltaY = y - STATE.lastTouch.y;
+
+        function onMouseDown(e) { 
+             if (e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
+             STATE.startX = e.clientX; STATE.startY = e.clientY;
+             STATE.lastX = e.clientX; STATE.lastY = e.clientY;
+             STATE.touchStartTime = Date.now();
+             STATE.isDragging = false;
+        }
+
+        function onTouchMove(e) {
+            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') { 
+                if(e.cancelable) e.preventDefault(); // 防止滚动
+            }
             
-            // 调整移动端灵敏度
+            const t = e.touches[0];
+            const dx = t.clientX - STATE.lastX;
+            const dy = t.clientY - STATE.lastY;
+            
+            // 只有当移动距离超过 5px 时，才判定为拖拽
+            // 这样可以防止手指按下的微小抖动被误判为拖拽
+            if (!STATE.isDragging && Math.hypot(t.clientX - STATE.startX, t.clientY - STATE.startY) > 5) {
+                STATE.isDragging = true;
+            }
+
+            if (STATE.isDragging) {
+                handleMoveLogic(dx, dy);
+            }
+            
+            STATE.lastX = t.clientX;
+            STATE.lastY = t.clientY;
+        }
+
+        function onMouseMove(e) { 
+            if (e.buttons === 0) return;
+            const dx = e.clientX - STATE.lastX;
+            const dy = e.clientY - STATE.lastY;
+             if (!STATE.isDragging && Math.hypot(e.clientX - STATE.startX, e.clientY - STATE.startY) > 5) {
+                STATE.isDragging = true;
+            }
+            if (STATE.isDragging) {
+                handleMoveLogic(dx, dy);
+            }
+            STATE.lastX = e.clientX; STATE.lastY = e.clientY;
+        }
+
+        function handleMoveLogic(deltaX, deltaY) {
+            // 移动端灵敏度调整
             const sensitivity = window.innerWidth < 600 ? 0.007 : 0.005;
 
             if (STATE.mode === 'VIEW') {
@@ -622,28 +667,35 @@
                 STATE.targetRotation.x += deltaY * (sensitivity * 0.8);
                 STATE.targetRotation.x = Math.max(-0.6, Math.min(0.6, STATE.targetRotation.x));
             }
-            STATE.lastTouch.x = x; STATE.lastTouch.y = y;
         }
 
-        function onTouchEnd() { handleEnd(); } function onMouseUp() { handleEnd(); }
-        
-        function handleEnd() { 
-            if(!STATE.isDragging) return;
-            STATE.isDragging = false; 
-            const touchDuration = Date.now() - STATE.touchStartTime;
-            if (touchDuration < 250) {
-                checkIntersection();
+        function onTouchEnd(e) {
+            // 如果不是拖拽（即移动很小），则视为点击
+            if (!STATE.isDragging) {
+                // 使用 startX/Y 进行检测，因为 touchend 没有 touches 坐标
+                checkIntersection(STATE.startX, STATE.startY);
             }
+            STATE.isDragging = false;
         }
 
-        function checkIntersection() {
+        function onMouseUp(e) {
+            if (!STATE.isDragging) {
+                checkIntersection(e.clientX, e.clientY);
+            }
+            STATE.isDragging = false;
+        }
+
+        function checkIntersection(x, y) {
             if (STATE.mode === 'VIEW') {
                 closeViewMode();
                 return;
             }
 
-            mouse.x = (STATE.lastTouch.x / window.innerWidth) * 2 - 1; mouse.y = -(STATE.lastTouch.y / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera); const intersects = raycaster.intersectObjects(interactableObjects);
+            mouse.x = (x / window.innerWidth) * 2 - 1; 
+            mouse.y = -(y / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera); 
+            const intersects = raycaster.intersectObjects(interactableObjects);
             
             if (intersects.length > 0) { 
                 const target = intersects[0].object.userData.parentGroup || intersects[0].object; 
