@@ -141,8 +141,6 @@
             "https://images.unsplash.com/photo-1543589077-47d81606c1bf?w=1080&q=90", 
             "https://images.unsplash.com/photo-1511268011861-691ed9340eab?w=1080&q=90",
             "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=1080&q=90"
-            "https://i.postimg.cc/rz6M371w/eb3fbeccb156e05e334cff4603b6ff35.jpg"
-            "https://i.postimg.cc/QCqZYVdS/1e6b48577dba6322191120a2f16e8864.jpg"
         ];
 
         const POEMS = [
@@ -196,7 +194,7 @@
         const startOverlay = document.getElementById('start-overlay');
         startOverlay.addEventListener('click', async () => {
             const bgm = document.getElementById('bgm');
-            bgm.volume = 0.1; try { bgm.play(); } catch(e) {}
+            bgm.volume = 0.3; try { bgm.play(); } catch(e) {}
             initAudio(); 
             startOverlay.style.opacity = 0;
             setTimeout(() => startOverlay.remove(), 1200);
