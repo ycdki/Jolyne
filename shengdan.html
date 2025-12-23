@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Merry Christmas - Classic Sequence</title>
+    <title>Merry Christmas - Candy & Fix</title>
     <style>
         body { 
             margin: 0; overflow: hidden; 
-            /* 【还原】背景：经典的深暖黑渐变，不再是那种浓郁的红褐暖色 */
+            /* 背景：深暖黑渐变 */
             background: radial-gradient(circle at center, #1a1005 0%, #000000 100%); 
             font-family: 'Times New Roman', serif; 
             touch-action: none; 
@@ -32,7 +32,6 @@
             font-family: 'Cinzel', serif; font-weight: 400; 
             font-size: clamp(28px, 6vw, 48px);
             margin: 0; letter-spacing: 6px; 
-            /* 【还原】标题：经典的流金配色 */
             background: linear-gradient(135deg, #fff 0%, #ffd700 40%, #ffcc00 60%, #fff 100%);
             background-size: 200% auto;
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -153,20 +152,18 @@
             { title: "平安夜", lines: "钟声敲响的时刻\n星光洒落肩头\n愿温暖与爱\n常伴你左右" }
         ];
         
-        // 【还原】颜色配置：经典的香槟金、暖红，不使用过暖的橙色
         const CONFIG = {
             colors: { bg: 0x000000, gold: 0xffd700, warmGold: 0xffaa33, warmRed: 0xff3300, warmLight: 0xffddaa },
-            particles: { count: 1200, treeHeight: 24, treeRadius: 8.5 }
+            particles: { count: 1400, treeHeight: 24, treeRadius: 8.5 }
         };
 
-        // 固定切换顺序
         const SCATTER_STYLES = ['SPHERE', 'GALAXY', 'RING', 'HELIX'];
 
         const STATE = {
             mode: 'TREE', 
             viewTarget: null, 
             scatterStyle: 'SPHERE',
-            scatterIndex: 0, // 用于固定顺序切换
+            scatterIndex: 0, 
             rotation: { x: 0, y: 0 }, 
             targetRotation: { x: 0, y: 0 },
             viewRotation: { x: 0, y: 0 },
@@ -185,6 +182,7 @@
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
         let audioCtx;
+        let caneTexture; // 新增：拐杖糖纹理
         const occupiedSpace = [];
 
         async function loadFonts() {
@@ -200,7 +198,11 @@
         async function init() {
             await loadFonts();
             document.getElementById('loader-text').style.opacity = 0;
-            initThree(); setupEnvironment(); createParticles(); createSnow();     
+            initThree(); 
+            setupEnvironment(); 
+            createCaneTexture(); // 1. 生成纹理
+            createParticles(); 
+            createSnow();     
             loadPreloadedPhotos(); loadPoems();
             setupPostProcessing(); setupInteractions(); 
             
@@ -260,17 +262,12 @@
         function setupEnvironment() {
             const pmremGenerator = new THREE.PMREMGenerator(renderer);
             scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture; 
-            
-            // 【还原】灯光：经典的暖黄光，去除了“温馨暖夜”版中夸张的红橙色补光
             const spotLight = new THREE.SpotLight(0xffaa00, 80);
             spotLight.position.set(10, 30, 20); spotLight.angle = 0.6; spotLight.penumbra = 0.5; scene.add(spotLight);
-            
             const fillLight = new THREE.PointLight(0xff6600, 5, 50);
             fillLight.position.set(-15, 5, 10); scene.add(fillLight);
-            
             const bottomLight = new THREE.DirectionalLight(0xffeebb, 1.0);
             bottomLight.position.set(0, -10, 10); scene.add(bottomLight);
-            
             const ambient = new THREE.AmbientLight(0xffccaa, 0.3); scene.add(ambient);
         }
 
@@ -280,6 +277,25 @@
             bloomPass.threshold = 0.8; bloomPass.strength = 0.7; bloomPass.radius = 0.5;     
             composer = new EffectComposer(renderer);
             composer.addPass(renderScene); composer.addPass(bloomPass);
+        }
+
+        // 新增：创建拐杖糖纹理
+        function createCaneTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,128,128);
+            ctx.fillStyle = '#cc0000'; 
+            ctx.beginPath();
+            // 绘制斜条纹
+            for(let i=-128; i<256; i+=32) {
+                ctx.moveTo(i, 0); ctx.lineTo(i+32, 128); ctx.lineTo(i+16, 128); ctx.lineTo(i-16, 0);
+            }
+            ctx.fill();
+            caneTexture = new THREE.CanvasTexture(canvas);
+            caneTexture.wrapS = THREE.RepeatWrapping; caneTexture.wrapT = THREE.RepeatWrapping;
+            caneTexture.repeat.set(3, 3);
+            caneTexture.colorSpace = THREE.SRGBColorSpace;
         }
 
         class Particle {
@@ -369,9 +385,7 @@
                     targetPos.copy(this.posScatter); 
                 }
 
-                // 【还原】匀速运动，去除爆发时的变速
                 this.mesh.position.lerp(targetPos, 2.5 * dt);
-                // 【还原】匀速缩放，去除呼吸感
                 this.mesh.scale.setScalar(THREE.MathUtils.lerp(this.mesh.scale.x, targetScale, 4 * dt));
 
                 if (this.type === 'CRYSTAL' || mode === 'SCATTER') {
@@ -385,7 +399,15 @@
                         const angle = Math.atan2(this.mesh.position.x, this.mesh.position.z);
                         const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), angle);
                         this.mesh.quaternion.slerp(q, 5 * dt);
-                    } else { this.mesh.rotation.y += 0.1 * dt; }
+                    } else if (this.type === 'CANE') {
+                        // 让拐杖糖朝向树中心
+                        const targetPos = new THREE.Vector3(0, this.mesh.position.y, 0);
+                        this.mesh.lookAt(targetPos);
+                    } else { 
+                        // 树上时缓慢自转
+                        this.mesh.rotation.x = THREE.MathUtils.lerp(this.mesh.rotation.x, 0, dt);
+                        this.mesh.rotation.y += 0.5 * dt; 
+                    }
                 }
                 if (this.type === 'LIGHT' && this.mesh.material && this.mesh.material.emissive) {
                     const intensity = 0.5 + 0.5 * Math.sin(time * this.twinkleSpeed + this.twinklePhase);
@@ -397,18 +419,27 @@
         function createParticles() {
             const sphereGeo = new THREE.SphereGeometry(0.35, 32, 32); const crystalGeo = new THREE.OctahedronGeometry(0.3, 0); const lightGeo = new THREE.SphereGeometry(0.18, 16, 16); 
             
-            // 【还原】材质：经典的香槟金
+            // 2. 增加拐杖糖几何
+            const curve = new THREE.CatmullRomCurve3([
+                new THREE.Vector3(0, -0.5, 0), new THREE.Vector3(0, 0.3, 0),
+                new THREE.Vector3(0.1, 0.5, 0), new THREE.Vector3(0.3, 0.4, 0)
+            ]);
+            const candyGeo = new THREE.TubeGeometry(curve, 16, 0.08, 8, false);
+
             const goldMat = new THREE.MeshPhysicalMaterial({ color: CONFIG.colors.gold, metalness: 1.0, roughness: 0.2, clearcoat: 1.0, emissive: 0x553300, emissiveIntensity: 0.2 });
             const amberMat = new THREE.MeshPhysicalMaterial({ color: CONFIG.colors.warmGold, metalness: 0.6, roughness: 0.2, clearcoat: 1.0, emissive: 0xaa4400, emissiveIntensity: 0.5 });
             const rubyMat = new THREE.MeshPhysicalMaterial({ color: 0xff3333, metalness: 0.4, roughness: 0.1, clearcoat: 1.0, emissive: 0x880000, emissiveIntensity: 0.6 });
             const crystalMat = new THREE.MeshStandardMaterial({ color: 0xffffee, metalness: 0.9, roughness: 0.0, emissive: 0x332211, emissiveIntensity: 0.3 });
             const lightMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.warmLight, emissive: CONFIG.colors.warmLight, emissiveIntensity: 3.0, toneMapped: false });
+            const candyMat = new THREE.MeshStandardMaterial({ map: caneTexture, roughness: 0.4 });
 
             for (let i = 0; i < CONFIG.particles.count; i++) {
                 const rand = Math.random(); let mesh, type;
                 if (rand < 0.15) { mesh = new THREE.Mesh(lightGeo, lightMat.clone()); type = 'LIGHT'; }
                 else if (rand < 0.35) { mesh = new THREE.Mesh(crystalGeo, crystalMat); mesh.scale.setScalar(0.8+Math.random()*0.4); type = 'CRYSTAL'; }
-                else if (rand < 0.65) { mesh = new THREE.Mesh(sphereGeo, goldMat); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'DECO'; }
+                // 3. 加入拐杖糖 (3% 概率, 减少数量)
+                else if (rand < 0.38) { mesh = new THREE.Mesh(candyGeo, candyMat); mesh.scale.setScalar(0.8); type = 'CANE'; }
+                else if (rand < 0.70) { mesh = new THREE.Mesh(sphereGeo, goldMat); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'DECO'; }
                 else if (rand < 0.85) { mesh = new THREE.Mesh(sphereGeo, amberMat); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'DECO'; }
                 else { mesh = new THREE.Mesh(sphereGeo, rubyMat); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'DECO'; }
                 mainGroup.add(mesh); particleSystem.push(new Particle(mesh, type));
@@ -553,12 +584,22 @@
             });
         }
 
-        function onTouchStart(e) { handleStart(e.touches ? e.touches[0].clientX : e.clientX, e.touches ? e.touches[0].clientY : e.clientY); }
-        function onMouseDown(e) { handleStart(e.clientX, e.clientY); }
+        function onTouchStart(e) { 
+            // 修复：触摸按钮时不触发场景旋转
+            if (e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
+            handleStart(e.touches ? e.touches[0].clientX : e.clientX, e.touches ? e.touches[0].clientY : e.clientY); 
+        }
+        function onMouseDown(e) { 
+            if (e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
+            handleStart(e.clientX, e.clientY); 
+        }
         function handleStart(x, y) { STATE.isDragging = true; STATE.lastTouch.x = x; STATE.lastTouch.y = y; STATE.touchStartTime = Date.now(); }
         
         function onTouchMove(e) { 
-            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') { e.preventDefault(); }
+            // 修复：只在 canvas 上阻止默认滚动，允许 UI 交互
+            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') { 
+                if(e.cancelable) e.preventDefault(); 
+            }
             handleMove(e.touches ? e.touches[0].clientX : e.clientX, e.touches ? e.touches[0].clientY : e.clientY); 
         }
         function onMouseMove(e) { if(e.buttons === 0) { STATE.isDragging=false; return;} handleMove(e.clientX, e.clientY); }
@@ -568,14 +609,17 @@
             const deltaX = x - STATE.lastTouch.x; 
             const deltaY = y - STATE.lastTouch.y;
             
+            // 调整移动端灵敏度
+            const sensitivity = window.innerWidth < 600 ? 0.007 : 0.005;
+
             if (STATE.mode === 'VIEW') {
-                STATE.viewRotation.y += deltaX * 0.005;
-                STATE.viewRotation.x += deltaY * 0.005;
+                STATE.viewRotation.y += deltaX * sensitivity;
+                STATE.viewRotation.x += deltaY * sensitivity;
                 STATE.viewRotation.x = Math.max(-0.6, Math.min(0.6, STATE.viewRotation.x));
                 STATE.viewRotation.y = Math.max(-0.6, Math.min(0.6, STATE.viewRotation.y));
             } else {
-                STATE.targetRotation.y += deltaX * 0.004; 
-                STATE.targetRotation.x += deltaY * 0.004;
+                STATE.targetRotation.y += deltaX * (sensitivity * 0.8); 
+                STATE.targetRotation.x += deltaY * (sensitivity * 0.8);
                 STATE.targetRotation.x = Math.max(-0.6, Math.min(0.6, STATE.targetRotation.x));
             }
             STATE.lastTouch.x = x; STATE.lastTouch.y = y;
@@ -584,6 +628,7 @@
         function onTouchEnd() { handleEnd(); } function onMouseUp() { handleEnd(); }
         
         function handleEnd() { 
+            if(!STATE.isDragging) return;
             STATE.isDragging = false; 
             const touchDuration = Date.now() - STATE.touchStartTime;
             if (touchDuration < 250) {
@@ -620,7 +665,6 @@
         }
         function toggleMode() {
             if (STATE.mode === 'TREE') {
-                // 【保留】固定顺序
                 const style = SCATTER_STYLES[STATE.scatterIndex];
                 STATE.scatterStyle = style;
                 particleSystem.forEach(p => p.calculateScatterPosition(style));
