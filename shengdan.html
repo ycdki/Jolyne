@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Merry Christmas - Slow Luxury</title>
+    <title>Merry Christmas - Ultimate Edition</title>
     <style>
         body { 
             margin: 0; overflow: hidden; 
-            /* 背景：深邃但带有暖意的午夜蓝 -> 接近黑色的暖褐色 */
             background: radial-gradient(circle at center, #1a1005 0%, #000000 100%); 
             font-family: 'Times New Roman', serif; 
             touch-action: none; 
@@ -21,22 +20,44 @@
             display: flex; flex-direction: column; 
             align-items: center;
             justify-content: space-between;
-            padding: 40px 20px;
+            padding: 50px 20px;
             box-sizing: border-box;
             transition: opacity 0.5s;
         }
         
-        /* 标题样式 - 暖金流光 */
-        h1 { 
-            color: #ffcc66; font-size: 38px; margin: 0; font-weight: 400; 
-            letter-spacing: 6px; 
+        /* 标题样式 - 升级版美学 */
+        .title-container {
             text-align: center;
-            text-shadow: 0 0 30px rgba(255, 160, 60, 0.6); 
-            background: linear-gradient(to bottom, #fff, #ffaa33);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            font-family: 'Cinzel', 'Times New Roman', serif;
-            opacity: 0.95;
-            margin-top: 15px;
+            pointer-events: none;
+        }
+        h1 { 
+            font-family: 'Cinzel', serif;
+            font-weight: 400;
+            font-size: 42px; 
+            margin: 0; 
+            letter-spacing: 8px; 
+            /* 奢华流金渐变 */
+            background: linear-gradient(135deg, #fff 0%, #ffd700 40%, #ffcc00 60%, #fff 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent;
+            /* 复合阴影增加立体感 */
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3)) drop-shadow(0 0 20px rgba(255, 160, 0, 0.2));
+            animation: shine 5s linear infinite;
+        }
+        .subtitle {
+            font-family: 'Great Vibes', cursive;
+            color: #eebb66;
+            font-size: 24px;
+            margin-top: 5px;
+            opacity: 0.8;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px rgba(238, 187, 102, 0.3);
+        }
+
+        @keyframes shine {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
         }
 
         /* 底部控制区 */
@@ -45,38 +66,52 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
             margin-bottom: 30px;
         }
+        
+        .buttons-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
 
-        /* 按钮样式 - 暖色玻璃感 */
+        /* 按钮样式 */
         .glass-btn {
-            background: rgba(255, 160, 60, 0.08); 
-            border: 1px solid rgba(255, 200, 100, 0.3); 
-            box-shadow: 0 0 15px rgba(255, 100, 0, 0.2);
+            background: rgba(255, 160, 60, 0.05); 
+            border: 1px solid rgba(255, 200, 100, 0.2); 
+            box-shadow: 0 0 15px rgba(255, 100, 0, 0.1);
             color: #ffcc88; 
-            padding: 10px 24px; 
+            padding: 12px 24px; 
             cursor: pointer; 
             text-transform: uppercase; 
-            letter-spacing: 3px; 
+            letter-spacing: 2px; 
             font-size: 11px;
             transition: all 0.4s ease;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(10px);
             border-radius: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
+            min-width: 110px;
         }
-        .glass-btn:active { transform: scale(0.96); }
+        .glass-btn:active { transform: scale(0.95); }
+        .glass-btn.active { 
+            background: rgba(255, 160, 60, 0.15); 
+            color: #fff;
+            border-color: rgba(255, 200, 100, 0.5);
+            box-shadow: 0 0 20px rgba(255, 100, 0, 0.3);
+        }
         
         #file-input { display: none; }
 
         .hint-text {
-            color: rgba(255, 200, 150, 0.4);
+            color: rgba(255, 220, 180, 0.4);
             font-size: 10px;
             letter-spacing: 2px;
             text-align: center;
             text-transform: uppercase;
+            margin-bottom: 5px;
         }
 
         /* 开场覆盖层 */
@@ -99,7 +134,7 @@
             font-size: 14px;
             letter-spacing: 6px;
             text-transform: uppercase;
-            animation: glowPulse 4s infinite;
+            animation: glowPulse 3s infinite;
             cursor: pointer;
             background: rgba(50,20,0,0.3);
             transition: all 0.3s;
@@ -110,11 +145,9 @@
             100% { box-shadow: 0 0 5px rgba(255,180,80,0.1); border-color: rgba(255,180,80,0.3); } 
         }
 
-        /* 查看模式遮罩 */
         #view-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(10, 5, 0, 0.85); /* 暖黑色背景 */
-            backdrop-filter: blur(8px);
+            background: radial-gradient(circle, rgba(0,0,0,0) 20%, rgba(10,5,0,0.95) 90%);
             z-index: 5;
             opacity: 0; pointer-events: none;
             transition: opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1);
@@ -122,10 +155,18 @@
             padding-bottom: 60px;
         }
         #view-overlay.active { opacity: 1; pointer-events: auto; }
-        .close-hint { color: rgba(255,220,180,0.5); font-size: 11px; letter-spacing: 3px; text-transform: uppercase; }
+        .close-hint { color: rgba(255,220,180,0.5); font-size: 12px; letter-spacing: 3px; text-transform: uppercase; }
+
+        /* Loader */
+        #loader-text {
+            position: absolute; top: 60%; 
+            color: #664422; font-size: 10px; letter-spacing: 2px;
+            transition: opacity 0.5s;
+        }
 
     </style>
     
+    <!-- 引入字体 -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Great+Vibes&family=Ma+Shan+Zheng&display=swap');
     </style>
@@ -144,18 +185,27 @@
     <!-- 开场层 -->
     <div id="start-overlay">
         <div class="start-title">Warm Holiday</div>
-        <div class="start-btn">Open</div>
+        <div class="start-btn">Open Gift</div>
+        <div id="loader-text">Loading Fonts & Resources...</div>
     </div>
 
     <div id="canvas-container"></div>
 
     <div id="ui-layer">
-        <h1>MERRY CHRISTMAS</h1>
+        <div class="title-container">
+            <h1>MERRY CHRISTMAS</h1>
+            <div class="subtitle">Best Wishes for You</div>
+        </div>
         
         <div class="bottom-controls">
             <div class="hint-text">Tap Card to View • Tap Empty Space to Explode</div>
             
-            <div style="display:flex; gap:10px;">
+            <div class="buttons-row">
+                <!-- 音乐开关 -->
+                <button id="music-btn" class="glass-btn">
+                    🎵 Music: ON
+                </button>
+
                 <label class="glass-btn">
                     + Add Memory
                     <input type="file" id="file-input" multiple accept="image/*">
@@ -168,6 +218,12 @@
         <div class="close-hint">Tap anywhere to close</div>
     </div>
 
+    <!-- 
+    ================================================================
+    🎵 【在此处修改背景音乐】 🎵
+    替换下方的 src 链接为您自己的 mp3 链接即可。
+    ================================================================ 
+    -->
     <audio id="bgm" loop>
         <source src="https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=christmas-piano-11027.mp3" type="audio/mpeg">
     </audio>
@@ -179,16 +235,22 @@
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'; 
 
-        // ==========================================
-        // 🎄 数据配置区 🎄
-        // ==========================================
-        
+        // =================================================================
+        // 📸 【在此处修改照片】 📸
+        // 将下方的链接替换为您朋友照片的链接。
+        // 可以是网络链接，也可以是 Base64 编码。
+        // =================================================================
         const FRIEND_PHOTOS = [
-            "https://images.unsplash.com/photo-1543589077-47d81606c1bf?w=500&q=80", 
-            "https://images.unsplash.com/photo-1511268011861-691ed9340eab?w=500&q=80",
-            "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=500&q=80"
+            "https://images.unsplash.com/photo-1543589077-47d81606c1bf?w=1080&q=90", 
+            "https://images.unsplash.com/photo-1511268011861-691ed9340eab?w=1080&q=90",
+            "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=1080&q=90"
         ];
 
+        // =================================================================
+        // 📜 【在此处修改诗歌】 📜
+        // 每一段 {...} 代表一张便签。
+        // \n 代表换行。
+        // =================================================================
         const POEMS = [
             {
                 title: "Silent Night",
@@ -207,12 +269,9 @@
         const CONFIG = {
             colors: {
                 bg: 0x000000, 
-                // 经典香槟金
                 gold: 0xffd700,
                 warmGold: 0xffaa33,
-                // 亮红色改为暖红
                 warmRed: 0xff3300,
-                // 暖光
                 warmLight: 0xffddaa  
             },
             particles: {
@@ -225,6 +284,7 @@
         const STATE = {
             mode: 'TREE', 
             viewTarget: null, 
+            scatterStyle: 'SPHERE', // 'SPHERE', 'GALAXY', 'RING', 'HELIX'
             rotation: { x: 0, y: 0 },
             targetRotation: { x: 0, y: 0 },
             isDragging: false,
@@ -232,7 +292,7 @@
             touchStartTime: 0
         };
 
-        let scene, camera, renderer, composer;
+        let scene, camera, renderer, composer, bloomPass; 
         let mainGroup, snowGroup; 
         let clock = new THREE.Clock();
         let particleSystem = []; 
@@ -241,7 +301,26 @@
         let mouse = new THREE.Vector2();
         let audioCtx;
 
+        // 核心修复：强制加载字体
+        async function loadFonts() {
+            const fontName = 'Great Vibes';
+            const fontUrl = 'https://fonts.gstatic.com/s/greatvibes/v14/RWmMoKWR9v4ksMfl53KWHxD4i7s.woff2';
+            
+            try {
+                const font = new FontFace(fontName, `url(${fontUrl})`);
+                await font.load();
+                document.fonts.add(font);
+                console.log('Font loaded successfully');
+            } catch (err) {
+                console.warn('Font loading failed, falling back to cursive', err);
+            }
+        }
+
         async function init() {
+            // 等待字体加载完成
+            await loadFonts();
+            document.getElementById('loader-text').style.opacity = 0;
+
             initThree();
             setupEnvironment(); 
             createParticles(); 
@@ -259,7 +338,7 @@
         const startOverlay = document.getElementById('start-overlay');
         startOverlay.addEventListener('click', async () => {
             const bgm = document.getElementById('bgm');
-            bgm.volume = 0.5; 
+            bgm.volume = 0.3; 
             try { bgm.play(); } catch(e) {}
             initAudio(); 
 
@@ -281,7 +360,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.toneMapping = THREE.ACESFilmicToneMapping; 
-            renderer.toneMappingExposure = 1.1; // 稍微调亮曝光
+            renderer.toneMappingExposure = 1.1; 
             container.appendChild(renderer.domElement);
 
             mainGroup = new THREE.Group();
@@ -295,24 +374,20 @@
             const pmremGenerator = new THREE.PMREMGenerator(renderer);
             scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture; 
 
-            // 1. 主聚光灯 (暖金)
             const spotLight = new THREE.SpotLight(0xffaa00, 80);
             spotLight.position.set(10, 30, 20);
             spotLight.angle = 0.6;
             spotLight.penumbra = 0.5;
             scene.add(spotLight);
             
-            // 2. 补光灯 (暖橙) - 消除阴影死黑
             const fillLight = new THREE.PointLight(0xff6600, 5, 50);
             fillLight.position.set(-15, 5, 10);
             scene.add(fillLight);
 
-            // 3. 底部上照光 (柔和暖白)
             const bottomLight = new THREE.DirectionalLight(0xffeebb, 1.0);
             bottomLight.position.set(0, -10, 10);
             scene.add(bottomLight);
 
-            // 4. 环境光 (整体提亮)
             const ambient = new THREE.AmbientLight(0xffccaa, 0.3); 
             scene.add(ambient);
         }
@@ -320,9 +395,9 @@
         function setupPostProcessing() {
             const renderScene = new RenderPass(scene, camera);
             
-            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-            bloomPass.threshold = 0.8; // 稍微降低阈值，让更多暖光产生光晕
-            bloomPass.strength = 0.7;  // 增强光晕，营造温暖朦胧感
+            bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass.threshold = 0.8; 
+            bloomPass.strength = 0.7;  
             bloomPass.radius = 0.5;     
 
             composer = new EffectComposer(renderer);
@@ -339,7 +414,6 @@
                 this.baseScale = mesh.scale.x; 
                 this.originalRotation = mesh.rotation.clone();
 
-                // 减慢闪烁速度 (1.0 - 2.0 -> 0.5 - 1.5)
                 this.twinkleSpeed = Math.random() * 1.0 + 0.5;
                 this.twinklePhase = Math.random() * Math.PI * 2;
                 
@@ -355,6 +429,7 @@
             }
 
             calculatePositions() {
+                // 1. 树形位置
                 const h = CONFIG.particles.treeHeight;
                 const halfH = h / 2;
                 let t = Math.random(); 
@@ -366,14 +441,57 @@
                 const r = rMax * (0.8 + Math.random() * 0.4); 
                 this.posTree.set(Math.cos(angle) * r, y, Math.sin(angle) * r);
 
-                let rScatter = 10 + Math.random() * 20;
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.acos(2 * Math.random() - 1);
-                this.posScatter.set(
-                    rScatter * Math.sin(phi) * Math.cos(theta),
-                    rScatter * Math.sin(phi) * Math.sin(theta),
-                    rScatter * Math.cos(phi)
-                );
+                // 初始散开位置 (Sphere)
+                this.calculateScatterPosition('SPHERE');
+            }
+
+            // 新增：动态计算散开位置
+            calculateScatterPosition(style) {
+                if (style === 'SPHERE') {
+                    const r = 10 + Math.random() * 15;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(2 * Math.random() - 1);
+                    this.posScatter.set(
+                        r * Math.sin(phi) * Math.cos(theta),
+                        r * Math.sin(phi) * Math.sin(theta),
+                        r * Math.cos(phi)
+                    );
+                } else if (style === 'GALAXY') {
+                    // 螺旋星系
+                    const angle = Math.random() * Math.PI * 4; // 2圈
+                    const r = 5 + Math.random() * 20; // 核心空，外围散
+                    // 加上旋臂偏移
+                    const armOffset = (Math.floor(Math.random()*3) * (Math.PI*2/3));
+                    const finalAngle = angle + armOffset;
+                    
+                    this.posScatter.set(
+                        Math.cos(finalAngle) * r,
+                        (Math.random() - 0.5) * 4, // 扁平
+                        Math.sin(finalAngle) * r
+                    );
+                } else if (style === 'RING') {
+                    // 土星环
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = 15 + Math.random() * 5;
+                    this.posScatter.set(
+                        Math.cos(angle) * r,
+                        (Math.random() - 0.5) * 2,
+                        Math.sin(angle) * r
+                    );
+                    // 让环倾斜
+                    this.posScatter.applyAxisAngle(new THREE.Vector3(1,0,0), 0.5);
+                    this.posScatter.applyAxisAngle(new THREE.Vector3(0,0,1), 0.3);
+                } else if (style === 'HELIX') {
+                    // DNA 双螺旋
+                    const t = Math.random() * 40 - 20; // 高度范围
+                    const r = 8 + Math.random() * 2;
+                    const angle = t * 0.5 + (Math.random() > 0.5 ? 0 : Math.PI); // 两条链
+                    this.posScatter.set(
+                        Math.cos(angle) * r,
+                        t,
+                        Math.sin(angle) * r
+                    );
+                }
             }
 
             update(dt, mode, viewTarget, time) {
@@ -391,6 +509,7 @@
                     targetPos.copy(this.posTree);
                     targetPos.y += Math.sin(time * 0.5 + this.mesh.id) * 0.08;
                 } else {
+                    // 散开模式
                     targetPos.copy(this.posScatter);
                 }
 
@@ -398,7 +517,6 @@
                 this.mesh.scale.setScalar(THREE.MathUtils.lerp(this.mesh.scale.x, targetScale, 4 * dt));
 
                 if (this.type === 'CRYSTAL' || mode === 'SCATTER') {
-                    // 减慢自转速度 (0.5 -> 0.2)
                     this.mesh.rotation.x += dt * 0.2;
                     this.mesh.rotation.y += dt * 0.3;
                 } else if (mode === 'TREE') {
@@ -407,7 +525,6 @@
                         const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), angle);
                         this.mesh.quaternion.slerp(q, 5 * dt);
                     } else {
-                        // 减慢装饰球自转
                         this.mesh.rotation.y += 0.1 * dt;
                     }
                 }
@@ -424,43 +541,36 @@
             const crystalGeo = new THREE.OctahedronGeometry(0.3, 0); 
             const lightGeo = new THREE.SphereGeometry(0.18, 16, 16); 
 
-            // --- 材质全面升级：暖色调 & 拒绝黑色 ---
-
-            // 1. 经典香槟金
             const goldMat = new THREE.MeshPhysicalMaterial({
                 color: CONFIG.colors.gold, 
                 metalness: 1.0, 
                 roughness: 0.2,
                 clearcoat: 1.0, 
-                emissive: 0x553300, // 暖色自发光，防止死黑
+                emissive: 0x553300, 
                 emissiveIntensity: 0.2
             });
 
-            // 2. 暖琥珀/亮橙色 (替代原来的黑红)
             const amberMat = new THREE.MeshPhysicalMaterial({
                 color: CONFIG.colors.warmGold, 
                 metalness: 0.6, roughness: 0.2,
                 clearcoat: 1.0,
-                emissive: 0xaa4400, // 强烈的橙色自发光
+                emissive: 0xaa4400, 
                 emissiveIntensity: 0.5
             });
 
-            // 3. 暖色红宝石 (替代原来的暗红)
             const rubyMat = new THREE.MeshPhysicalMaterial({
                 color: 0xff3333,
                 metalness: 0.4, roughness: 0.1,
                 clearcoat: 1.0,
-                emissive: 0x880000, // 红色辉光
+                emissive: 0x880000, 
                 emissiveIntensity: 0.6
             });
 
-            // 4. 水晶 (微暖)
             const crystalMat = new THREE.MeshStandardMaterial({
                 color: 0xffffee, metalness: 0.9, roughness: 0.0, 
                 emissive: 0x332211, emissiveIntensity: 0.3 
             });
 
-            // 5. 呼吸灯 (暖黄)
             const lightMat = new THREE.MeshStandardMaterial({
                 color: CONFIG.colors.warmLight,
                 emissive: CONFIG.colors.warmLight,
@@ -473,26 +583,21 @@
                 let mesh, type;
 
                 if (rand < 0.15) {
-                    // 15% 呼吸灯
                     mesh = new THREE.Mesh(lightGeo, lightMat.clone()); 
                     type = 'LIGHT';
                 } else if (rand < 0.35) {
-                    // 20% 水晶
                     mesh = new THREE.Mesh(crystalGeo, crystalMat);
                     mesh.scale.setScalar(0.8 + Math.random() * 0.4);
                     type = 'CRYSTAL';
                 } else if (rand < 0.65) {
-                    // 30% 金球
                     mesh = new THREE.Mesh(sphereGeo, goldMat);
                     mesh.scale.setScalar(0.6 + Math.random() * 0.6);
                     type = 'DECO';
                 } else if (rand < 0.85) {
-                    // 20% 琥珀 (替代之前的暗色)
                     mesh = new THREE.Mesh(sphereGeo, amberMat);
                     mesh.scale.setScalar(0.6 + Math.random() * 0.6);
                     type = 'DECO';
                 } else {
-                    // 15% 亮红
                     mesh = new THREE.Mesh(sphereGeo, rubyMat);
                     mesh.scale.setScalar(0.6 + Math.random() * 0.6);
                     type = 'DECO';
@@ -519,7 +624,6 @@
             const animateStar = () => {
                 const t = Date.now() * 0.001;
                 star.rotation.y = t * 0.5;
-                // 减慢星星脉冲 (t*3 -> t*1.5)
                 starGlow.scale.setScalar(1 + Math.sin(t * 1.5) * 0.1); 
                 requestAnimationFrame(animateStar);
             }
@@ -532,7 +636,6 @@
             const ctx = canvas.getContext('2d');
             
             const grad = ctx.createRadialGradient(32,32,0, 32,32,32);
-            // 暖白色的雪花
             grad.addColorStop(0, 'rgba(255,245,230,0.8)');
             grad.addColorStop(0.4, 'rgba(255,230,200,0.2)');
             grad.addColorStop(1, 'rgba(255,255,255,0)');
@@ -556,7 +659,7 @@
                 transparent: true, opacity: 0.6,
                 blending: THREE.AdditiveBlending,
                 depthWrite: false,
-                color: 0xffeedd // 暖色
+                color: 0xffeedd 
             });
 
             const points = new THREE.Points(geo, mat);
@@ -569,7 +672,6 @@
                 const positions = points.geometry.attributes.position.array;
                 const velocities = points.userData.velocities;
                 for(let i=0; i < positions.length; i+=3) {
-                    // 减慢雪花下落速度 (*0.1 -> *0.03)
                     positions[i+1] -= velocities[i/3] * 0.03; 
                     positions[i] += Math.sin(clock.elapsedTime * 0.5 + i) * 0.01; 
                     if(positions[i+1] < -30) positions[i+1] = 30;
@@ -584,6 +686,9 @@
             FRIEND_PHOTOS.forEach(url => {
                 loader.load(url, (t) => {
                     t.colorSpace = THREE.SRGBColorSpace;
+                    t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                    t.minFilter = THREE.LinearFilter;
+                    t.magFilter = THREE.LinearFilter;
                     createCard(t, 'PHOTO');
                 });
             });
@@ -592,64 +697,68 @@
         function loadPoems() {
             POEMS.forEach(poem => {
                 const canvas = document.createElement('canvas');
-                canvas.width = 512; canvas.height = 600; 
+                canvas.width = 1024; canvas.height = 1200; 
                 const ctx = canvas.getContext('2d');
                 
                 ctx.fillStyle = '#fffdf5'; 
-                ctx.fillRect(0,0,512,600);
+                ctx.fillRect(0,0,1024,1200);
                 
                 ctx.strokeStyle = '#eebb66'; 
-                ctx.lineWidth = 10;
-                ctx.strokeRect(15, 15, 482, 570);
-                ctx.lineWidth = 2;
-                ctx.strokeRect(25, 25, 462, 550);
+                ctx.lineWidth = 20;
+                ctx.strokeRect(30, 30, 964, 1140);
+                ctx.lineWidth = 4;
+                ctx.strokeRect(50, 50, 924, 1100);
 
                 ctx.fillStyle = '#2c1b0e'; 
                 ctx.textAlign = 'center';
                 
-                ctx.font = 'bold 54px "Cinzel", serif';
-                ctx.fillText(poem.title, 256, 120);
+                ctx.font = 'bold 100px "Cinzel", serif';
+                ctx.fillText(poem.title, 512, 240);
                 
                 ctx.beginPath();
-                ctx.moveTo(156, 150); ctx.lineTo(356, 150);
+                ctx.moveTo(312, 300); ctx.lineTo(712, 300);
                 ctx.stroke();
 
-                ctx.font = '32px "Ma Shan Zheng", serif';
+                ctx.font = '64px "Ma Shan Zheng", serif';
                 const lines = poem.lines.split('\n');
-                let y = 220;
+                let y = 440;
                 lines.forEach(line => {
-                    ctx.fillText(line, 256, y);
-                    y += 60;
+                    ctx.fillText(line, 512, y);
+                    y += 120;
                 });
 
                 const tex = new THREE.CanvasTexture(canvas);
                 tex.colorSpace = THREE.SRGBColorSpace;
+                tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
                 createCard(tex, 'POEM');
             });
         }
 
+        // ==========================================
+        // 字体绘制区域
+        // ==========================================
         function createTextOverlay() {
             const canvas = document.createElement('canvas');
-            canvas.width = 512; canvas.height = 128;
+            canvas.width = 1024; canvas.height = 256; 
             const ctx = canvas.getContext('2d');
             
-            ctx.font = '80px "Great Vibes", cursive';
+            // 使用字体堆栈，确保即使花体失败也有手写体风格
+            ctx.font = '120px "Great Vibes", "Brush Script MT", cursive';
             ctx.textAlign = 'right';
-            ctx.textBaseline = 'bottom';
+            ctx.textBaseline = 'middle';
             
-            // 暖金色文字
-            const gradient = ctx.createLinearGradient(0, 0, 512, 0);
+            const gradient = ctx.createLinearGradient(0, 0, 1024, 0);
             gradient.addColorStop(0, '#ffaa33');
             gradient.addColorStop(0.5, '#ffffdd');
             gradient.addColorStop(1, '#ff8800');
             
             ctx.fillStyle = gradient;
             ctx.shadowColor = 'rgba(0,0,0,0.8)';
-            ctx.shadowBlur = 4;
-            ctx.shadowOffsetX = 2;
-            ctx.shadowOffsetY = 2;
+            ctx.shadowBlur = 5;
+            ctx.shadowOffsetX = 3;
+            ctx.shadowOffsetY = 3;
             
-            ctx.fillText("Merry Christmas", 500, 110);
+            ctx.fillText("Merry Christmas", 984, 128);
             
             const tex = new THREE.CanvasTexture(canvas);
             const mat = new THREE.MeshBasicMaterial({ 
@@ -658,25 +767,18 @@
                 opacity: 1.0,
                 side: THREE.DoubleSide
             });
-            const geo = new THREE.PlaneGeometry(1.5, 0.375); 
+            const geo = new THREE.PlaneGeometry(2.0, 0.5); 
             const mesh = new THREE.Mesh(geo, mat);
             return mesh;
         }
 
-        // ==========================================
-        // 核心修改：还原初始代码的相框样式
-        // ==========================================
         function createCard(texture, type) {
-            // 调整尺寸以适应原始代码的逻辑，但保持长宽比
             const width = 1.3, height = 1.6;
             const group = new THREE.Group();
             
-            // 1. 还原风格：单层厚重金属相框
-            // 原始代码是 BoxGeometry(1.4, 1.4, 0.05) 颜色 gold
-            // 这里我们保持这个简单的几何体结构
             const frameGeo = new THREE.BoxGeometry(width + 0.2, height + 0.2, 0.06);
             const frameMat = new THREE.MeshStandardMaterial({ 
-                color: CONFIG.colors.gold, // 纯金色
+                color: CONFIG.colors.gold, 
                 metalness: 1.0, 
                 roughness: 0.15,
                 emissive: 0x332200, 
@@ -685,17 +787,15 @@
             const frame = new THREE.Mesh(frameGeo, frameMat);
             group.add(frame);
             
-            // 2. 照片内容 (直接贴在相框上)
             const contentGeo = new THREE.PlaneGeometry(width, height);
             const contentMat = new THREE.MeshBasicMaterial({ map: texture }); 
             const content = new THREE.Mesh(contentGeo, contentMat);
-            content.position.z = 0.035; // 稍微突出
+            content.position.z = 0.035; 
             group.add(content);
 
-            // 3. 保留文字装饰
             if (type === 'PHOTO') {
                 const textMesh = createTextOverlay();
-                textMesh.position.set(0.15, -0.7, 0.06); 
+                textMesh.position.set(0.35, -0.75, 0.06); 
                 textMesh.rotation.z = 0.05; 
                 group.add(textMesh);
             }
@@ -729,6 +829,9 @@
                     reader.onload = (ev) => {
                         new THREE.TextureLoader().load(ev.target.result, t => {
                             t.colorSpace = THREE.SRGBColorSpace;
+                            t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                            t.minFilter = THREE.LinearFilter;
+                            t.magFilter = THREE.LinearFilter;
                             createCard(t, 'PHOTO');
                             playSoundEffect('sparkle');
                         });
@@ -738,6 +841,21 @@
             });
 
             document.getElementById('view-overlay').addEventListener('click', closeViewMode);
+
+            const musicBtn = document.getElementById('music-btn');
+            const bgm = document.getElementById('bgm');
+
+            musicBtn.addEventListener('click', () => {
+                if (bgm.paused) {
+                    bgm.play();
+                    musicBtn.textContent = '🎵 Music: ON';
+                    musicBtn.classList.remove('active'); 
+                } else {
+                    bgm.pause();
+                    musicBtn.textContent = '🔇 Music: OFF';
+                    musicBtn.classList.add('active'); 
+                }
+            });
         }
 
         function onTouchStart(e) { e.preventDefault(); handleStart(e.touches[0].clientX, e.touches[0].clientY); }
@@ -798,7 +916,19 @@
         }
 
         function toggleMode() {
-            STATE.mode = (STATE.mode === 'TREE') ? 'SCATTER' : 'TREE';
+            if (STATE.mode === 'TREE') {
+                // 随机选择一种散开模式
+                const styles = ['SPHERE', 'GALAXY', 'RING', 'HELIX'];
+                const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+                STATE.scatterStyle = randomStyle;
+                
+                // 重新计算所有粒子的散开位置
+                particleSystem.forEach(p => p.calculateScatterPosition(randomStyle));
+                
+                STATE.mode = 'SCATTER';
+            } else {
+                STATE.mode = 'TREE';
+            }
             playSoundEffect('chime');
         }
 
@@ -881,6 +1011,12 @@
                 
                 const s = 2.2 + Math.sin(time) * 0.02;
                 STATE.viewTarget.scale.lerp(new THREE.Vector3(s, s, s), 4 * dt);
+                
+                bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.0, 5 * dt);
+                renderer.toneMappingExposure = THREE.MathUtils.lerp(renderer.toneMappingExposure, 0.8, 5 * dt);
+            } else {
+                bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.7, 2 * dt);
+                renderer.toneMappingExposure = THREE.MathUtils.lerp(renderer.toneMappingExposure, 1.1, 2 * dt);
             }
 
             composer.render();
