@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Merry Christmas - Interactive</title>
+    <title>Merry Christmas - Final</title>
     <style>
         body { 
             margin: 0; overflow: hidden; 
@@ -15,7 +15,6 @@
         }
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
         
-        /* UI 层 */
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 10; pointer-events: none;
@@ -27,7 +26,6 @@
             transition: opacity 0.5s;
         }
         
-        /* 标题样式 */
         .title-container { text-align: center; pointer-events: none; margin-top: 20px; }
         h1 { 
             font-family: 'Cinzel', serif; font-weight: 400; 
@@ -47,7 +45,6 @@
         }
         @keyframes shine { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
 
-        /* 底部控制区 */
         .bottom-controls { 
             pointer-events: auto; 
             display: flex; flex-direction: column; align-items: center; 
@@ -142,14 +139,10 @@
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'; 
 
-        // ==========================================
-        // 📸 照片链接配置
-        // ==========================================
         const FRIEND_PHOTOS = [
             "https://images.unsplash.com/photo-1543589077-47d81606c1bf?w=1080&q=90", 
             "https://images.unsplash.com/photo-1511268011861-691ed9340eab?w=1080&q=90",
-            "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=1080&q=90",
-            "https://i.postimg.cc/QCqZYVdS/1e6b48577dba6322191120a2f16e8864.jpg",
+            "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=1080&q=90"
         ];
 
         const POEMS = [
@@ -169,7 +162,7 @@
             scatterStyle: 'SPHERE', 
             rotation: { x: 0, y: 0 }, 
             targetRotation: { x: 0, y: 0 },
-            viewRotation: { x: 0, y: 0 }, // 查看模式下的手动旋转偏移
+            viewRotation: { x: 0, y: 0 }, // 查看模式下的微调旋转
             isDragging: false, 
             lastTouch: { x: 0, y: 0 }, 
             touchStartTime: 0,
@@ -215,11 +208,15 @@
                 };
             }
             
-            // 后台自动暂停，防止鬼畜
+            // FIX: 页面可见性处理 - 修复后台卡顿问题
             document.addEventListener('visibilitychange', () => {
-                STATE.isPaused = document.hidden;
-                if (!STATE.isPaused) {
-                    clock.getDelta(); // 清除积累的时间差
+                if (document.hidden) {
+                    STATE.isPaused = true;
+                    clock.stop(); // 停止时钟
+                } else {
+                    STATE.isPaused = false;
+                    clock.start(); // 重启时钟
+                    animate(); // 重启动画循环
                 }
             });
 
@@ -256,7 +253,6 @@
             const aspect = window.innerWidth / window.innerHeight;
             camera.aspect = aspect;
             camera.updateProjectionMatrix();
-            // 竖屏离得更远，确保查看时不爆屏
             const targetZ = aspect < 0.8 ? 75 : (aspect < 1.2 ? 55 : 40);
             camera.position.set(0, 0, targetZ);
         }
@@ -359,10 +355,9 @@
 
                 if (mode === 'VIEW' && this.mesh === viewTarget) return; 
                 
-                // 视觉净化：查看模式下，其他所有粒子后退并变小/透明
                 if (mode === 'VIEW') {
-                    targetPos.copy(this.posTree).multiplyScalar(2.5); // 推得更远
-                    targetScale = 0; // 彻底隐藏，避免遮挡
+                    targetPos.copy(this.posTree).multiplyScalar(2.5); 
+                    targetScale = 0; 
                 } else if (mode === 'TREE') {
                     targetPos.copy(this.posTree); targetPos.y += Math.sin(time * 0.5 + this.mesh.id) * 0.08;
                 } else { 
@@ -451,15 +446,25 @@
             });
         }
 
+        // FIX: 诗歌绘制背景颜色加深，增加质感
         function loadPoems() {
             POEMS.forEach(poem => {
                 const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 1200; const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#fdfbf0'; ctx.fillRect(0,0,1024,1200);
-                ctx.fillStyle = 'rgba(160, 140, 100, 0.05)'; for(let i=0; i<5000; i++) { ctx.fillRect(Math.random()*1024, Math.random()*1200, 2, 2); }
-                ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 15; ctx.strokeRect(30, 30, 964, 1140); ctx.lineWidth = 3; ctx.strokeRect(50, 50, 924, 1100);
+                // 使用复古羊皮纸色，而非纯白
+                ctx.fillStyle = '#e3d0b0'; 
+                ctx.fillRect(0,0,1024,1200);
+                
+                // 增加颗粒杂色
+                ctx.fillStyle = 'rgba(100, 80, 60, 0.08)'; 
+                for(let i=0; i<8000; i++) { ctx.fillRect(Math.random()*1024, Math.random()*1200, 2, 2); }
+
+                ctx.strokeStyle = '#8b5a2b'; ctx.lineWidth = 15; ctx.strokeRect(30, 30, 964, 1140); 
+                ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 5; ctx.strokeRect(50, 50, 924, 1100);
+                
                 ctx.fillStyle = '#3e2723'; ctx.textAlign = 'center';
                 ctx.font = 'bold 100px "Cinzel", serif'; ctx.fillText(poem.title, 512, 240);
-                ctx.beginPath(); ctx.moveTo(312, 300); ctx.lineTo(712, 300); ctx.strokeStyle = '#3e2723'; ctx.lineWidth=2; ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(312, 300); ctx.lineTo(712, 300); ctx.strokeStyle = '#3e2723'; ctx.lineWidth=3; ctx.stroke();
+                
                 ctx.font = '64px "Ma Shan Zheng", serif'; const lines = poem.lines.split('\n'); let y = 440;
                 lines.forEach(line => { ctx.fillText(line, 512, y); y += 120; });
                 const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -487,11 +492,11 @@
             const contentGeo = new THREE.PlaneGeometry(width, height);
             let contentMat;
             
-            // 材质修复：便签使用 Basic 材质且 toneMapped: false 以保持原色，不反光
+            // FIX: 诗歌材质完全去反光，不受光照影响，确保清晰
             if (type === 'POEM') {
                 contentMat = new THREE.MeshBasicMaterial({ 
                     map: texture, 
-                    toneMapped: false, // 关键：不受环境光影响，保持纸张颜色
+                    toneMapped: false // 关键：禁用色调映射，保持原色
                 });
             } else {
                 contentMat = new THREE.MeshBasicMaterial({ map: texture }); 
@@ -541,18 +546,19 @@
         function onTouchMove(e) { e.preventDefault(); handleMove(e.touches[0].clientX, e.touches[0].clientY); }
         function onMouseMove(e) { if(e.buttons === 0) { STATE.isDragging=false; return;} handleMove(e.clientX, e.clientY); }
         
+        // FIX: 旋转逻辑优化，增加查看模式下的手动旋转
         function handleMove(x, y) {
             if (!STATE.isDragging) return;
             const deltaX = x - STATE.lastTouch.x; 
             const deltaY = y - STATE.lastTouch.y;
             
             if (STATE.mode === 'VIEW') {
-                // 查看模式下的微旋转 (View Rotation)
+                // 查看模式下的微旋转 (View Rotation) - 丝滑手感
                 STATE.viewRotation.y += deltaX * 0.005;
                 STATE.viewRotation.x += deltaY * 0.005;
                 // 限制旋转角度，避免翻转太厉害
-                STATE.viewRotation.x = Math.max(-0.5, Math.min(0.5, STATE.viewRotation.x));
-                STATE.viewRotation.y = Math.max(-0.5, Math.min(0.5, STATE.viewRotation.y));
+                STATE.viewRotation.x = Math.max(-0.6, Math.min(0.6, STATE.viewRotation.x));
+                STATE.viewRotation.y = Math.max(-0.6, Math.min(0.6, STATE.viewRotation.y));
             } else {
                 // 正常模式下的场景旋转
                 STATE.targetRotation.y += deltaX * 0.004; 
@@ -563,22 +569,33 @@
         }
 
         function onTouchEnd() { handleEnd(); } function onMouseUp() { handleEnd(); }
-        function handleEnd() { STATE.isDragging = false; if (Date.now() - STATE.touchStartTime < 200) checkIntersection(); }
+        
+        // FIX: 单击判定逻辑优化
+        function handleEnd() { 
+            STATE.isDragging = false; 
+            const touchDuration = Date.now() - STATE.touchStartTime;
+            // 短按且移动距离小才算点击，防止拖拽误触
+            if (touchDuration < 250) {
+                checkIntersection();
+            }
+        }
 
+        // FIX: 单击退出逻辑
         function checkIntersection() {
+            // 如果已经在查看模式，点击任何地方（包括图片本身）都退出
+            if (STATE.mode === 'VIEW') {
+                closeViewMode();
+                return;
+            }
+
             mouse.x = (STATE.lastTouch.x / window.innerWidth) * 2 - 1; mouse.y = -(STATE.lastTouch.y / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera); const intersects = raycaster.intersectObjects(interactableObjects);
             
-            // 点击逻辑优化：
-            // 1. 如果点击到了对象 -> 进入/切换 View 模式
-            // 2. 如果没点击对象 且 当前是 View 模式 -> 退出 View
-            // 3. 如果没点击对象 且 当前是 Tree/Scatter -> 切换散开形态
             if (intersects.length > 0) { 
                 const target = intersects[0].object.userData.parentGroup || intersects[0].object; 
                 enterViewMode(target); 
             } else { 
-                if (STATE.mode === 'VIEW') closeViewMode(); 
-                else toggleMode(); 
+                toggleMode(); 
             }
         }
 
@@ -616,16 +633,15 @@
         }
 
         function animate() {
-            if (STATE.isPaused) return; // 暂停时不渲染
+            if (STATE.isPaused) return; 
 
             requestAnimationFrame(animate); 
-            // 限制最大 dt 为 0.1s，防止切回来时鬼畜
+            // FIX: 限制时间步长，防止后台切回时鬼畜加速
             const dt = Math.min(clock.getDelta(), 0.1); 
             const time = clock.elapsedTime; 
             
             updateSnow();
 
-            // 场景整体旋转（仅在非查看模式）
             if (STATE.mode !== 'VIEW') {
                 if (!STATE.isDragging) { STATE.targetRotation.y += 0.08 * dt; STATE.targetRotation.x = THREE.MathUtils.lerp(STATE.targetRotation.x, 0, dt); }
                 STATE.rotation.x += (STATE.targetRotation.x - STATE.rotation.x) * 4 * dt; STATE.rotation.y += (STATE.targetRotation.y - STATE.rotation.y) * 4 * dt;
@@ -635,20 +651,18 @@
             particleSystem.forEach(p => p.update(dt, STATE.mode, STATE.viewTarget, time));
 
             if (STATE.mode === 'VIEW' && STATE.viewTarget) {
-                // 适配不同屏幕的查看距离 (竖屏离得更远)
                 const viewDist = window.innerWidth < 600 ? -14 : -9;
                 const targetWorldPos = new THREE.Vector3(0, 0, viewDist); 
                 targetWorldPos.applyMatrix4(camera.matrixWorld);
                 const targetLocalPos = targetWorldPos.clone().applyMatrix4(mainGroup.matrixWorld.clone().invert());
                 STATE.viewTarget.position.lerp(targetLocalPos, 4 * dt);
                 
-                // 基础旋转：面向相机
                 const camWorldQuat = new THREE.Quaternion(); camera.getWorldQuaternion(camWorldQuat);
                 const parentWorldQuat = new THREE.Quaternion(); mainGroup.getWorldQuaternion(parentWorldQuat);
                 const parentWorldQuatInv = parentWorldQuat.clone().invert();
                 const targetLocalQuat = parentWorldQuatInv.multiply(camWorldQuat);
                 
-                // 叠加用户的手动微旋转 (Silk Rotation)
+                // FIX: 叠加手动微旋转
                 const userRotQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(STATE.viewRotation.x, STATE.viewRotation.y, 0));
                 targetLocalQuat.multiply(userRotQuat);
 
