@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Merry Christmas - Final</title>
+    <title>Merry Christmas - Classic Sequence</title>
     <style>
         body { 
             margin: 0; overflow: hidden; 
+            /* 【还原】背景：经典的深暖黑渐变，不再是那种浓郁的红褐暖色 */
             background: radial-gradient(circle at center, #1a1005 0%, #000000 100%); 
             font-family: 'Times New Roman', serif; 
             touch-action: none; 
@@ -31,6 +32,7 @@
             font-family: 'Cinzel', serif; font-weight: 400; 
             font-size: clamp(28px, 6vw, 48px);
             margin: 0; letter-spacing: 6px; 
+            /* 【还原】标题：经典的流金配色 */
             background: linear-gradient(135deg, #fff 0%, #ffd700 40%, #ffcc00 60%, #fff 100%);
             background-size: 200% auto;
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -151,18 +153,23 @@
             { title: "平安夜", lines: "钟声敲响的时刻\n星光洒落肩头\n愿温暖与爱\n常伴你左右" }
         ];
         
+        // 【还原】颜色配置：经典的香槟金、暖红，不使用过暖的橙色
         const CONFIG = {
             colors: { bg: 0x000000, gold: 0xffd700, warmGold: 0xffaa33, warmRed: 0xff3300, warmLight: 0xffddaa },
             particles: { count: 1200, treeHeight: 24, treeRadius: 8.5 }
         };
 
+        // 固定切换顺序
+        const SCATTER_STYLES = ['SPHERE', 'GALAXY', 'RING', 'HELIX'];
+
         const STATE = {
             mode: 'TREE', 
             viewTarget: null, 
-            scatterStyle: 'SPHERE', 
+            scatterStyle: 'SPHERE',
+            scatterIndex: 0, // 用于固定顺序切换
             rotation: { x: 0, y: 0 }, 
             targetRotation: { x: 0, y: 0 },
-            viewRotation: { x: 0, y: 0 }, // 查看模式下的微调旋转
+            viewRotation: { x: 0, y: 0 },
             isDragging: false, 
             lastTouch: { x: 0, y: 0 }, 
             touchStartTime: 0,
@@ -208,16 +215,9 @@
                 };
             }
             
-            // FIX: 页面可见性处理 - 修复后台卡顿问题
             document.addEventListener('visibilitychange', () => {
-                if (document.hidden) {
-                    STATE.isPaused = true;
-                    clock.stop(); // 停止时钟
-                } else {
-                    STATE.isPaused = false;
-                    clock.start(); // 重启时钟
-                    animate(); // 重启动画循环
-                }
+                if (document.hidden) { STATE.isPaused = true; clock.stop(); } 
+                else { STATE.isPaused = false; clock.start(); animate(); }
             });
 
             animate();
@@ -260,12 +260,17 @@
         function setupEnvironment() {
             const pmremGenerator = new THREE.PMREMGenerator(renderer);
             scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture; 
+            
+            // 【还原】灯光：经典的暖黄光，去除了“温馨暖夜”版中夸张的红橙色补光
             const spotLight = new THREE.SpotLight(0xffaa00, 80);
             spotLight.position.set(10, 30, 20); spotLight.angle = 0.6; spotLight.penumbra = 0.5; scene.add(spotLight);
+            
             const fillLight = new THREE.PointLight(0xff6600, 5, 50);
             fillLight.position.set(-15, 5, 10); scene.add(fillLight);
+            
             const bottomLight = new THREE.DirectionalLight(0xffeebb, 1.0);
             bottomLight.position.set(0, -10, 10); scene.add(bottomLight);
+            
             const ambient = new THREE.AmbientLight(0xffccaa, 0.3); scene.add(ambient);
         }
 
@@ -356,19 +361,25 @@
                 if (mode === 'VIEW' && this.mesh === viewTarget) return; 
                 
                 if (mode === 'VIEW') {
-                    targetPos.copy(this.posTree).multiplyScalar(2.5); 
-                    targetScale = 0; 
+                    targetPos.copy(this.posTree).multiplyScalar(1.3); 
+                    targetScale = this.baseScale * 0.3; 
                 } else if (mode === 'TREE') {
                     targetPos.copy(this.posTree); targetPos.y += Math.sin(time * 0.5 + this.mesh.id) * 0.08;
                 } else { 
                     targetPos.copy(this.posScatter); 
                 }
 
+                // 【还原】匀速运动，去除爆发时的变速
                 this.mesh.position.lerp(targetPos, 2.5 * dt);
+                // 【还原】匀速缩放，去除呼吸感
                 this.mesh.scale.setScalar(THREE.MathUtils.lerp(this.mesh.scale.x, targetScale, 4 * dt));
 
                 if (this.type === 'CRYSTAL' || mode === 'SCATTER') {
-                    this.mesh.rotation.x += dt * 0.2; this.mesh.rotation.y += dt * 0.3;
+                    if (this.type === 'PHOTO' || this.type === 'POEM') {
+                        this.mesh.rotation.x += dt * 0.1; this.mesh.rotation.y += dt * 0.15;
+                    } else {
+                        this.mesh.rotation.x += dt * 0.2; this.mesh.rotation.y += dt * 0.3;
+                    }
                 } else if (mode === 'TREE') {
                     if (this.type === 'PHOTO' || this.type === 'POEM') {
                         const angle = Math.atan2(this.mesh.position.x, this.mesh.position.z);
@@ -385,6 +396,8 @@
 
         function createParticles() {
             const sphereGeo = new THREE.SphereGeometry(0.35, 32, 32); const crystalGeo = new THREE.OctahedronGeometry(0.3, 0); const lightGeo = new THREE.SphereGeometry(0.18, 16, 16); 
+            
+            // 【还原】材质：经典的香槟金
             const goldMat = new THREE.MeshPhysicalMaterial({ color: CONFIG.colors.gold, metalness: 1.0, roughness: 0.2, clearcoat: 1.0, emissive: 0x553300, emissiveIntensity: 0.2 });
             const amberMat = new THREE.MeshPhysicalMaterial({ color: CONFIG.colors.warmGold, metalness: 0.6, roughness: 0.2, clearcoat: 1.0, emissive: 0xaa4400, emissiveIntensity: 0.5 });
             const rubyMat = new THREE.MeshPhysicalMaterial({ color: 0xff3333, metalness: 0.4, roughness: 0.1, clearcoat: 1.0, emissive: 0x880000, emissiveIntensity: 0.6 });
@@ -446,15 +459,12 @@
             });
         }
 
-        // FIX: 诗歌绘制背景颜色加深，增加质感
         function loadPoems() {
             POEMS.forEach(poem => {
                 const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 1200; const ctx = canvas.getContext('2d');
-                // 使用复古羊皮纸色，而非纯白
                 ctx.fillStyle = '#e3d0b0'; 
                 ctx.fillRect(0,0,1024,1200);
                 
-                // 增加颗粒杂色
                 ctx.fillStyle = 'rgba(100, 80, 60, 0.08)'; 
                 for(let i=0; i<8000; i++) { ctx.fillRect(Math.random()*1024, Math.random()*1200, 2, 2); }
 
@@ -487,27 +497,28 @@
             group.renderOrder = 999; 
             const frameGeo = new THREE.BoxGeometry(width + 0.2, height + 0.2, 0.06);
             const frameMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.gold, metalness: 1.0, roughness: 0.15, emissive: 0x332200, emissiveIntensity: 0.2 });
-            const frame = new THREE.Mesh(frameGeo, frameMat); group.add(frame);
+            const frame = new THREE.Mesh(frameGeo, frameMat); 
+            frame.userData = { parentGroup: group }; 
+            group.add(frame);
+            interactableObjects.push(frame); 
             
             const contentGeo = new THREE.PlaneGeometry(width, height);
             let contentMat;
             
-            // FIX: 诗歌材质完全去反光，不受光照影响，确保清晰
             if (type === 'POEM') {
-                contentMat = new THREE.MeshBasicMaterial({ 
-                    map: texture, 
-                    toneMapped: false // 关键：禁用色调映射，保持原色
-                });
+                contentMat = new THREE.MeshBasicMaterial({ map: texture, toneMapped: false, side: THREE.DoubleSide });
             } else {
-                contentMat = new THREE.MeshBasicMaterial({ map: texture }); 
+                contentMat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide }); 
             }
             
             const content = new THREE.Mesh(contentGeo, contentMat); content.position.z = 0.035; group.add(content);
+            interactableObjects.push(content); content.userData = { parentGroup: group }; 
+
             if (type === 'PHOTO') {
                 const textMesh = createTextOverlay(); textMesh.position.set(0.35, -0.75, 0.06); textMesh.rotation.z = 0.05; group.add(textMesh);
             }
             const s = 1.3; group.scale.set(s,s,s); group.userData = { isInteractable: true, type: type };
-            mainGroup.add(group); interactableObjects.push(content); content.userData = { parentGroup: group }; 
+            mainGroup.add(group); 
             particleSystem.push(new Particle(group, type));
         }
 
@@ -516,9 +527,13 @@
                 updateCameraPosition();
                 renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
             });
-            const c = document.getElementById('canvas-container');
-            c.addEventListener('touchstart', onTouchStart, {passive: false}); c.addEventListener('touchmove', onTouchMove, {passive: false}); c.addEventListener('touchend', onTouchEnd, {passive: false});
-            c.addEventListener('mousedown', onMouseDown); c.addEventListener('mousemove', onMouseMove); c.addEventListener('mouseup', onMouseUp);
+            document.addEventListener('touchstart', onTouchStart, {passive: false}); 
+            document.addEventListener('touchmove', onTouchMove, {passive: false}); 
+            document.addEventListener('touchend', onTouchEnd, {passive: false});
+            document.addEventListener('mousedown', onMouseDown); 
+            document.addEventListener('mousemove', onMouseMove); 
+            document.addEventListener('mouseup', onMouseUp);
+            
             document.getElementById('file-input').addEventListener('change', (e) => {
                 if(e.target.files && e.target.files[0]) {
                     const reader = new FileReader();
@@ -531,7 +546,6 @@
                     reader.readAsDataURL(e.target.files[0]);
                 }
             });
-            document.getElementById('view-overlay').addEventListener('click', closeViewMode);
             const musicBtn = document.getElementById('music-btn'); const bgm = document.getElementById('bgm');
             musicBtn.addEventListener('click', () => {
                 if (bgm.paused) { bgm.play(); musicBtn.textContent = '🎵 Music: ON'; musicBtn.classList.remove('active'); } 
@@ -539,28 +553,27 @@
             });
         }
 
-        function onTouchStart(e) { e.preventDefault(); handleStart(e.touches[0].clientX, e.touches[0].clientY); }
+        function onTouchStart(e) { handleStart(e.touches ? e.touches[0].clientX : e.clientX, e.touches ? e.touches[0].clientY : e.clientY); }
         function onMouseDown(e) { handleStart(e.clientX, e.clientY); }
         function handleStart(x, y) { STATE.isDragging = true; STATE.lastTouch.x = x; STATE.lastTouch.y = y; STATE.touchStartTime = Date.now(); }
         
-        function onTouchMove(e) { e.preventDefault(); handleMove(e.touches[0].clientX, e.touches[0].clientY); }
+        function onTouchMove(e) { 
+            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') { e.preventDefault(); }
+            handleMove(e.touches ? e.touches[0].clientX : e.clientX, e.touches ? e.touches[0].clientY : e.clientY); 
+        }
         function onMouseMove(e) { if(e.buttons === 0) { STATE.isDragging=false; return;} handleMove(e.clientX, e.clientY); }
         
-        // FIX: 旋转逻辑优化，增加查看模式下的手动旋转
         function handleMove(x, y) {
             if (!STATE.isDragging) return;
             const deltaX = x - STATE.lastTouch.x; 
             const deltaY = y - STATE.lastTouch.y;
             
             if (STATE.mode === 'VIEW') {
-                // 查看模式下的微旋转 (View Rotation) - 丝滑手感
                 STATE.viewRotation.y += deltaX * 0.005;
                 STATE.viewRotation.x += deltaY * 0.005;
-                // 限制旋转角度，避免翻转太厉害
                 STATE.viewRotation.x = Math.max(-0.6, Math.min(0.6, STATE.viewRotation.x));
                 STATE.viewRotation.y = Math.max(-0.6, Math.min(0.6, STATE.viewRotation.y));
             } else {
-                // 正常模式下的场景旋转
                 STATE.targetRotation.y += deltaX * 0.004; 
                 STATE.targetRotation.x += deltaY * 0.004;
                 STATE.targetRotation.x = Math.max(-0.6, Math.min(0.6, STATE.targetRotation.x));
@@ -570,19 +583,15 @@
 
         function onTouchEnd() { handleEnd(); } function onMouseUp() { handleEnd(); }
         
-        // FIX: 单击判定逻辑优化
         function handleEnd() { 
             STATE.isDragging = false; 
             const touchDuration = Date.now() - STATE.touchStartTime;
-            // 短按且移动距离小才算点击，防止拖拽误触
             if (touchDuration < 250) {
                 checkIntersection();
             }
         }
 
-        // FIX: 单击退出逻辑
         function checkIntersection() {
-            // 如果已经在查看模式，点击任何地方（包括图片本身）都退出
             if (STATE.mode === 'VIEW') {
                 closeViewMode();
                 return;
@@ -601,7 +610,7 @@
 
         function enterViewMode(target) {
             STATE.mode = 'VIEW'; STATE.viewTarget = target; 
-            STATE.viewRotation = { x: 0, y: 0 }; // 重置微旋转
+            STATE.viewRotation = { x: 0, y: 0 }; 
             playSoundEffect('whoosh');
             document.getElementById('view-overlay').classList.add('active'); document.querySelector('.bottom-controls').style.opacity = '0';
         }
@@ -611,10 +620,16 @@
         }
         function toggleMode() {
             if (STATE.mode === 'TREE') {
-                const styles = ['SPHERE', 'GALAXY', 'RING', 'HELIX']; const randomStyle = styles[Math.floor(Math.random() * styles.length)];
-                STATE.scatterStyle = randomStyle; particleSystem.forEach(p => p.calculateScatterPosition(randomStyle));
+                // 【保留】固定顺序
+                const style = SCATTER_STYLES[STATE.scatterIndex];
+                STATE.scatterStyle = style;
+                particleSystem.forEach(p => p.calculateScatterPosition(style));
+                
                 STATE.mode = 'SCATTER';
-            } else { STATE.mode = 'TREE'; }
+                STATE.scatterIndex = (STATE.scatterIndex + 1) % SCATTER_STYLES.length;
+            } else {
+                STATE.mode = 'TREE';
+            }
             playSoundEffect('chime');
         }
 
@@ -636,7 +651,6 @@
             if (STATE.isPaused) return; 
 
             requestAnimationFrame(animate); 
-            // FIX: 限制时间步长，防止后台切回时鬼畜加速
             const dt = Math.min(clock.getDelta(), 0.1); 
             const time = clock.elapsedTime; 
             
@@ -662,7 +676,6 @@
                 const parentWorldQuatInv = parentWorldQuat.clone().invert();
                 const targetLocalQuat = parentWorldQuatInv.multiply(camWorldQuat);
                 
-                // FIX: 叠加手动微旋转
                 const userRotQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(STATE.viewRotation.x, STATE.viewRotation.y, 0));
                 targetLocalQuat.multiply(userRotQuat);
 
