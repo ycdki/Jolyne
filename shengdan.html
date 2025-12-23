@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Merry Christmas - Touch Fixed</title>
+    <title>Merry Christmas - Audio Reactive</title>
     <style>
         body { 
             margin: 0; overflow: hidden; 
-            /* 背景：深暖黑渐变 */
+            /* 默认背景：深暖褐渐变 */
             background: radial-gradient(circle at center, #1a1005 0%, #000000 100%); 
             font-family: 'Times New Roman', serif; 
             touch-action: none; 
             user-select: none;
             -webkit-tap-highlight-color: transparent;
+            transition: background 1s ease; 
         }
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
         
@@ -27,7 +28,7 @@
             transition: opacity 0.5s;
         }
         
-        .title-container { text-align: center; pointer-events: none; margin-top: 20px; }
+        .title-container { text-align: center; pointer-events: none; margin-top: 20px; transition: all 0.5s; }
         h1 { 
             font-family: 'Cinzel', serif; font-weight: 400; 
             font-size: clamp(28px, 6vw, 48px);
@@ -35,66 +36,123 @@
             background: linear-gradient(135deg, #fff 0%, #ffd700 40%, #ffcc00 60%, #fff 100%);
             background-size: 200% auto;
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3)) drop-shadow(0 0 20px rgba(255, 160, 0, 0.2));
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.3));
             animation: shine 5s linear infinite;
+            transition: all 0.5s;
         }
         .subtitle {
             font-family: 'Great Vibes', cursive; color: #eebb66; 
             font-size: clamp(18px, 4vw, 28px); 
             margin-top: 5px; opacity: 0.8;
             letter-spacing: 2px; text-shadow: 0 0 5px rgba(238, 187, 102, 0.3);
+            transition: all 0.5s;
         }
         @keyframes shine { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+
+        /* Lain 风格字体类 */
+        .style-lain h1 {
+            font-family: 'Courier New', monospace !important;
+            font-weight: 900 !important;
+            background: none !important;
+            -webkit-text-fill-color: #ff0000 !important;
+            color: #ff0000 !important;
+            text-shadow: 2px 2px 0px #ffffff, 0 0 15px #ff0000 !important;
+            letter-spacing: 4px !important;
+            filter: none !important;
+        }
+        .style-lain .subtitle {
+            font-family: 'Courier New', monospace !important;
+            color: #ffffff !important;
+            background: #000;
+            padding: 2px 10px;
+            text-shadow: none !important;
+        }
 
         .bottom-controls { 
             pointer-events: auto; 
             display: flex; flex-direction: column; align-items: center; 
             gap: 15px; margin-bottom: 40px; 
         }
-        .buttons-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .buttons-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
 
         .glass-btn {
             background: rgba(255, 160, 60, 0.08); border: 1px solid rgba(255, 200, 100, 0.3); 
             box-shadow: 0 0 15px rgba(255, 100, 0, 0.2); color: #ffcc88; 
-            padding: 10px 24px; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; font-size: 12px;
+            padding: 10px 20px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; font-size: 11px;
             transition: all 0.4s ease; backdrop-filter: blur(8px); border-radius: 30px;
-            display: flex; align-items: center; justify-content: center; min-width: 100px;
+            display: flex; align-items: center; justify-content: center; min-width: 90px;
         }
-        .glass-btn:active { transform: scale(0.95); background: rgba(255, 160, 60, 0.2); }
-        .glass-btn.active { background: rgba(255, 160, 60, 0.2); color: #fff; border-color: rgba(255, 200, 100, 0.6); }
+        .glass-btn:active { transform: scale(0.95); }
         
         #file-input { display: none; }
         .hint-text { color: rgba(255, 220, 180, 0.5); font-size: 11px; letter-spacing: 1px; text-align: center; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
 
+        .style-lain .glass-btn {
+            background: #000 !important; border: 1px solid #ff0000 !important; color: #ff0000 !important;
+            box-shadow: 4px 4px 0px #ffffff !important; font-family: 'Courier New', monospace; border-radius: 0 !important;
+        }
+        .style-lain .hint-text { color: #ff0000; font-family: 'Courier New', monospace; background: #000; padding: 2px 5px; }
+
+        .style-green .glass-btn {
+            background: rgba(0, 40, 0, 0.4) !important; border-color: #55aa55 !important; color: #ccffcc !important;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2) !important;
+        }
+
         #start-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #050200; z-index: 100;
+            background: radial-gradient(circle at center, #3a1c1c 0%, #1a0500 60%, #000000 100%);
+            z-index: 100;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: opacity 1.2s ease-in-out; cursor: pointer;
         }
-        .start-title { font-family: 'Cinzel'; color: #fff; font-size: 32px; letter-spacing: 4px; text-shadow: 0 0 30px rgba(255,150,50,0.4); margin-bottom: 40px; }
-        .start-btn {
-            padding: 12px 40px; border: 1px solid rgba(255, 180, 80, 0.5); color: #ffcc88;
-            font-size: 16px; letter-spacing: 6px; text-transform: uppercase;
-            animation: glowPulse 3s infinite; cursor: pointer; background: rgba(50,20,0,0.3); transition: all 0.3s;
-        }
-        @keyframes glowPulse { 
-            0% { box-shadow: 0 0 5px rgba(255,180,80,0.1); border-color: rgba(255,180,80,0.3); } 
-            50% { box-shadow: 0 0 25px rgba(255,100,20,0.4); border-color: rgba(255,200,100,0.8); } 
-            100% { box-shadow: 0 0 5px rgba(255,180,80,0.1); border-color: rgba(255,180,80,0.3); } 
+        #start-overlay::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+');
+            opacity: 0.3; pointer-events: none;
         }
 
+        .start-title { 
+            font-family: 'Cinzel'; color: #fff; font-size: 32px; letter-spacing: 4px; 
+            text-shadow: 0 0 20px rgba(255, 200, 100, 0.5); 
+            margin-bottom: 40px; z-index: 2;
+        }
+        .start-btn {
+            padding: 12px 40px; border: 1px solid rgba(255, 215, 0, 0.5); color: #ffd700;
+            font-size: 16px; letter-spacing: 6px; text-transform: uppercase;
+            animation: glowPulse 3s infinite; cursor: pointer; background: rgba(0,0,0,0.4); 
+            transition: all 0.3s; z-index: 2; backdrop-filter: blur(5px);
+        }
+        .start-btn:hover { background: rgba(255,215,0,0.1); color: #fff; }
+
+        @keyframes glowPulse { 
+            0% { box-shadow: 0 0 5px rgba(255,215,0,0.1); border-color: rgba(255,215,0,0.3); } 
+            50% { box-shadow: 0 0 25px rgba(255,200,50,0.3); border-color: rgba(255,215,0,0.8); } 
+            100% { box-shadow: 0 0 5px rgba(255,215,0,0.1); border-color: rgba(255,215,0,0.3); } 
+        }
+
+        /* VIEW OVERLAY - 回归经典氛围感
+           左右渐变黑色，中间透出暖金光
+        */
         #view-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, rgba(0,0,0,0) 20%, rgba(10,5,0,0.95) 90%);
+            background: linear-gradient(90deg, 
+                rgba(0,0,0,0.98) 0%, 
+                rgba(20, 10, 0, 0.6) 20%, 
+                rgba(255, 200, 100, 0.05) 50%, 
+                rgba(20, 10, 0, 0.6) 80%, 
+                rgba(0,0,0,0.98) 100%
+            );
             z-index: 5; opacity: 0; pointer-events: none;
             transition: opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1);
             display: flex; align-items: flex-end; justify-content: center; padding-bottom: 80px;
         }
         #view-overlay.active { opacity: 1; pointer-events: auto; }
-        .close-hint { color: rgba(255,220,180,0.6); font-size: 14px; letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 2px 10px black; }
+        .close-hint { 
+            color: rgba(255,220,180,0.8); font-size: 14px; letter-spacing: 3px; 
+            text-transform: uppercase; text-shadow: 0 2px 10px black; 
+        }
 
-        #loader-text { position: absolute; top: 60%; color: #664422; font-size: 10px; letter-spacing: 2px; transition: opacity 0.5s; }
+        #loader-text { position: absolute; top: 60%; color: #ccaa88; font-size: 10px; letter-spacing: 2px; transition: opacity 0.5s; z-index: 2; }
     </style>
     
     <style>@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Great+Vibes&family=Ma+Shan+Zheng&display=swap');</style>
@@ -106,7 +164,7 @@
 <body>
 
     <div id="start-overlay">
-        <div class="start-title">Warm Holiday</div>
+        <div class="start-title">Winter Magic</div>
         <div class="start-btn">Tap to Start</div>
         <div id="loader-text">Loading Fonts & Resources...</div>
     </div>
@@ -114,14 +172,16 @@
     <div id="canvas-container"></div>
 
     <div id="ui-layer">
-        <div class="title-container">
+        <div class="title-container" id="title-box">
             <h1 id="main-title">MERRY CHRISTMAS</h1>
             <div class="subtitle" id="sub-title">Best Wishes for You</div>
         </div>
         <div class="bottom-controls">
             <div class="hint-text">✨ Tap to View • Tap Empty Area to Scatter ✨</div>
             <div class="buttons-row">
+                <button id="style-btn" class="glass-btn">🎨 Style: Gold</button>
                 <button id="music-btn" class="glass-btn">🎵 Music: ON</button>
+                <button id="next-bgm-btn" class="glass-btn">⏭ Next</button>
                 <label class="glass-btn">+ Photo <input type="file" id="file-input" multiple accept="image/*"></label>
             </div>
         </div>
@@ -129,7 +189,8 @@
 
     <div id="view-overlay"><div class="close-hint">Tap anywhere to close</div></div>
 
-    <audio id="bgm" loop>
+    <!-- 添加 crossorigin 属性以支持音频分析 -->
+    <audio id="bgm" loop crossorigin="anonymous">
         <source src="https://media.vocaroo.com/mp3/1joGv3iBg0Y8" type="audio/mpeg">
     </audio>
 
@@ -140,20 +201,56 @@
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'; 
 
+        const STYLES = {
+            GOLD: {
+                name: 'Gold',
+                bg: 'radial-gradient(circle at center, #1a1005 0%, #000000 100%)',
+                colors: { primary: 0xffd700, secondary: 0xffaa33, accent: 0xff3333, light: 0xffffee, treeBase: 0xffd700 },
+                bloomStrength: 0.7,
+                uiClass: ''
+            },
+            GREEN: {
+                name: 'Green',
+                bg: 'radial-gradient(circle at center, #051a05 0%, #000000 100%)',
+                colors: { primary: 0x2e8b57, secondary: 0x006400, accent: 0xff0000, light: 0xffd700, treeBase: 0x004d00 },
+                bloomStrength: 0.6,
+                uiClass: 'style-green'
+            },
+            LAIN: {
+                name: 'Lain',
+                bg: 'radial-gradient(circle at center, #1a0000 0%, #000000 100%)',
+                colors: { primary: 0xcccccc, secondary: 0x444444, accent: 0xff0000, light: 0x00ffff, treeBase: 0xdddddd },
+                bloomStrength: 0.85, 
+                uiClass: 'style-lain'
+            }
+        };
+
+        let currentStyleKey = 'GOLD';
+        const STYLE_KEYS = ['GOLD', 'GREEN', 'LAIN'];
+
+        const BGM_LIST = [
+            "https://media.vocaroo.com/mp3/1joGv3iBg0Y8", 
+            "https://media.vocaroo.com/mp3/1k5sq49McOA7",
+            "https://media.vocaroo.com/mp3/1gdvfY5CX8Bw"
+        ];
+        let currentBgmIndex = 0;
+
         const FRIEND_PHOTOS = [
-            "https://images.unsplash.com/photo-1543589077-47d81606c1bf?w=1080&q=90", 
-            "https://images.unsplash.com/photo-1511268011861-691ed9340eab?w=1080&q=90",
-            "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=1080&q=90"
+            "https://i.postimg.cc/XNRBX8BV/Cache_103fc550ee38730.jpg",
+            "https://i.postimg.cc/tRKn75nC/Cache_40404729bfd732d0.jpg",
+            "https://i.postimg.cc/RCkJqRJm/Cache_41da80620aa726b0.jpg",
+            "https://i.postimg.cc/y6M3WP3k/Cache_51006359137f8c71.jpg",
+            "https://i.postimg.cc/pVw5yZ5V/Cache_47cda0026acc190d.jpg",
+            "https://i.postimg.cc/BZrPtgPv/Cache_2541b39b488d9926.jpg"
         ];
 
         const POEMS = [
-            { title: "Silent Night", lines: "Silent night, holy night\nAll is calm, all is bright\nRound yon Virgin, Mother and Child" },
-            { title: "Wishes", lines: "May the lights of Christmas\nguide you to success\nand prosperity." },
-            { title: "平安夜", lines: "钟声敲响的时刻\n星光洒落肩头\n愿温暖与爱\n常伴你左右" }
+            { title: "Silent Night", lines: "Silent night, holy night\nAll is calm, all is bright" },
+            { title: "Wishes", lines: "May the lights of Christmas\nguide you to success." },
+            { title: "Lain", lines: "Present day,\nPresent time.\nHahahahaha..." } 
         ];
         
         const CONFIG = {
-            colors: { bg: 0x000000, gold: 0xffd700, warmGold: 0xffaa33, warmRed: 0xff3300, warmLight: 0xffddaa },
             particles: { count: 1400, treeHeight: 24, treeRadius: 8.5 }
         };
 
@@ -168,22 +265,19 @@
             targetRotation: { x: 0, y: 0 },
             viewRotation: { x: 0, y: 0 },
             isDragging: false, 
-            // 交互坐标记录
-            startX: 0, startY: 0,
-            lastX: 0, lastY: 0,
-            touchStartTime: 0,
+            startX: 0, startY: 0, lastX: 0, lastY: 0, touchStartTime: 0,
             snowEnabled: true,
             isPaused: false
         };
 
         let scene, camera, renderer, composer, bloomPass; 
-        let mainGroup, snowGroup; 
+        let mainGroup, snowGroup, starFieldGroup; 
         let clock = new THREE.Clock();
         let particleSystem = []; 
         let interactableObjects = []; 
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
-        let audioCtx;
+        let audioCtx, analyser, dataArray; // 音频分析变量
         let caneTexture; 
         const occupiedSpace = [];
 
@@ -204,7 +298,8 @@
             setupEnvironment(); 
             createCaneTexture(); 
             createParticles(); 
-            createSnow();     
+            createSnow();   
+            createBackgroundStars(); 
             loadPreloadedPhotos(); loadPoems();
             setupPostProcessing(); setupInteractions(); 
             
@@ -228,10 +323,15 @@
         }
 
         const startOverlay = document.getElementById('start-overlay');
-        startOverlay.addEventListener('click', async () => {
+        startOverlay.addEventListener('click', async (e) => {
+            e.stopPropagation(); 
             const bgm = document.getElementById('bgm');
-            bgm.volume = 0.3; try { bgm.play(); } catch(e) {}
-            initAudio(); 
+            bgm.volume = 0.3; 
+            
+            // 初始化音频上下文
+            initAudio(bgm);
+            
+            try { bgm.play(); } catch(e) {}
             startOverlay.style.opacity = 0;
             setTimeout(() => startOverlay.remove(), 1200);
             STATE.targetRotation.y = Math.PI * 2.5; 
@@ -251,6 +351,7 @@
             container.appendChild(renderer.domElement);
             mainGroup = new THREE.Group(); scene.add(mainGroup);
             snowGroup = new THREE.Group(); scene.add(snowGroup);
+            starFieldGroup = new THREE.Group(); scene.add(starFieldGroup);
         }
 
         function updateCameraPosition() {
@@ -264,9 +365,10 @@
         function setupEnvironment() {
             const pmremGenerator = new THREE.PMREMGenerator(renderer);
             scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture; 
+            
             const spotLight = new THREE.SpotLight(0xffaa00, 80);
             spotLight.position.set(10, 30, 20); spotLight.angle = 0.6; spotLight.penumbra = 0.5; scene.add(spotLight);
-            const fillLight = new THREE.PointLight(0xff6600, 5, 50);
+            const fillLight = new THREE.PointLight(0xff6622, 5, 50);
             fillLight.position.set(-15, 5, 10); scene.add(fillLight);
             const bottomLight = new THREE.DirectionalLight(0xffeebb, 1.0);
             bottomLight.position.set(0, -10, 10); scene.add(bottomLight);
@@ -281,23 +383,32 @@
             composer.addPass(renderScene); composer.addPass(bloomPass);
         }
 
-        // 新增：创建拐杖糖纹理
         function createCaneTexture() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 128; canvas.height = 128;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,128,128);
-            ctx.fillStyle = '#cc0000'; 
-            ctx.beginPath();
-            // 绘制斜条纹
-            for(let i=-128; i<256; i+=32) {
-                ctx.moveTo(i, 0); ctx.lineTo(i+32, 128); ctx.lineTo(i+16, 128); ctx.lineTo(i-16, 0);
-            }
+            const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128; const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,128,128); ctx.fillStyle = '#cc0000'; ctx.beginPath();
+            for(let i=-128; i<256; i+=32) { ctx.moveTo(i, 0); ctx.lineTo(i+32, 128); ctx.lineTo(i+16, 128); ctx.lineTo(i-16, 0); }
             ctx.fill();
-            caneTexture = new THREE.CanvasTexture(canvas);
-            caneTexture.wrapS = THREE.RepeatWrapping; caneTexture.wrapT = THREE.RepeatWrapping;
-            caneTexture.repeat.set(3, 3);
-            caneTexture.colorSpace = THREE.SRGBColorSpace;
+            caneTexture = new THREE.CanvasTexture(canvas); caneTexture.wrapS = THREE.RepeatWrapping; caneTexture.wrapT = THREE.RepeatWrapping; caneTexture.repeat.set(3, 3); caneTexture.colorSpace = THREE.SRGBColorSpace;
+        }
+
+        function createBackgroundStars() {
+            const geo = new THREE.BufferGeometry(); const pos = [];
+            for(let i=0; i<500; i++) {
+                const r = 200 + Math.random() * 300; const theta = Math.random() * Math.PI * 2; const phi = Math.acos(2 * Math.random() - 1);
+                pos.push(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
+            }
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            const mat = new THREE.PointsMaterial({ color: 0xffffee, size: 1.5, sizeAttenuation: true, transparent: true, opacity: 0.8 });
+            const stars = new THREE.Points(geo, mat); starFieldGroup.add(stars);
+        }
+
+        function createStarShape(outerRadius, innerRadius, points) {
+            const shape = new THREE.Shape(); const step = Math.PI / points;
+            for (let i = 0; i < 2 * points; i++) {
+                const r = (i % 2 === 0) ? outerRadius : innerRadius; const a = i * step + Math.PI / 2;
+                if (i === 0) shape.moveTo(r * Math.cos(a), r * Math.sin(a)); else shape.lineTo(r * Math.cos(a), r * Math.sin(a));
+            }
+            shape.closePath(); return shape;
         }
 
         class Particle {
@@ -321,13 +432,9 @@
                 if (this.type === 'PHOTO' || this.type === 'POEM') {
                     let valid = false; let attempts = 0;
                     while(!valid && attempts < 50) {
-                        let t = Math.random(); t = Math.pow(t, 0.85); 
-                        if(t < 0.15) t = 0.15 + Math.random() * 0.1;
-                        const y = (t * h) - halfH;
-                        let rMax = CONFIG.particles.treeRadius * (1.0 - t);
-                        if (rMax < 0.2) rMax = 0.2;
-                        const angle = t * 45 * Math.PI + Math.random() * Math.PI * 2;
-                        const r = rMax * 0.95; 
+                        let t = Math.random(); t = Math.pow(t, 0.85); if(t < 0.15) t = 0.15 + Math.random() * 0.1;
+                        const y = (t * h) - halfH; let rMax = CONFIG.particles.treeRadius * (1.0 - t); if (rMax < 0.2) rMax = 0.2;
+                        const angle = t * 45 * Math.PI + Math.random() * Math.PI * 2; const r = rMax * 0.95; 
                         const candidatePos = new THREE.Vector3(Math.cos(angle) * r, y, Math.sin(angle) * r);
                         let collision = false; const minDistance = 2.8; 
                         for (let pos of occupiedSpace) { if (candidatePos.distanceTo(pos) < minDistance) { collision = true; break; } }
@@ -335,18 +442,12 @@
                         attempts++;
                     }
                     if (!valid) {
-                        let t = Math.random(); const y = (t * h) - halfH;
-                        let rMax = CONFIG.particles.treeRadius * (1.0 - t);
-                        const angle = Math.random() * Math.PI * 2;
+                        let t = Math.random(); const y = (t * h) - halfH; let rMax = CONFIG.particles.treeRadius * (1.0 - t); const angle = Math.random() * Math.PI * 2;
                         this.posTree.set(Math.cos(angle)*rMax, y, Math.sin(angle)*rMax);
                     }
                 } else {
-                    let t = Math.random(); t = Math.pow(t, 0.85); 
-                    const y = (t * h) - halfH;
-                    let rMax = CONFIG.particles.treeRadius * (1.0 - t); 
-                    if (rMax < 0.2) rMax = 0.2;
-                    const angle = t * 45 * Math.PI + Math.random() * Math.PI * 2; 
-                    const r = rMax * (0.8 + Math.random() * 0.4); 
+                    let t = Math.random(); t = Math.pow(t, 0.85); const y = (t * h) - halfH; let rMax = CONFIG.particles.treeRadius * (1.0 - t); if (rMax < 0.2) rMax = 0.2;
+                    const angle = t * 45 * Math.PI + Math.random() * Math.PI * 2; const r = rMax * (0.8 + Math.random() * 0.4); 
                     this.posTree.set(Math.cos(angle) * r, y, Math.sin(angle) * r);
                 }
                 this.calculateScatterPosition('SPHERE');
@@ -354,61 +455,43 @@
 
             calculateScatterPosition(style) {
                 if (style === 'SPHERE') {
-                    const r = 10 + Math.random() * 15;
-                    const theta = Math.random() * Math.PI * 2; const phi = Math.acos(2 * Math.random() - 1);
+                    const r = 10 + Math.random() * 15; const theta = Math.random() * Math.PI * 2; const phi = Math.acos(2 * Math.random() - 1);
                     this.posScatter.set(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
                 } else if (style === 'GALAXY') {
-                    const angle = Math.random() * Math.PI * 4; const r = 5 + Math.random() * 20; 
-                    const armOffset = (Math.floor(Math.random()*3) * (Math.PI*2/3)); const finalAngle = angle + armOffset;
+                    const angle = Math.random() * Math.PI * 4; const r = 5 + Math.random() * 20; const armOffset = (Math.floor(Math.random()*3) * (Math.PI*2/3)); const finalAngle = angle + armOffset;
                     this.posScatter.set(Math.cos(finalAngle) * r, (Math.random() - 0.5) * 4, Math.sin(finalAngle) * r);
                 } else if (style === 'RING') {
                     const angle = Math.random() * Math.PI * 2; const r = 15 + Math.random() * 5;
                     this.posScatter.set(Math.cos(angle) * r, (Math.random() - 0.5) * 2, Math.sin(angle) * r);
                     this.posScatter.applyAxisAngle(new THREE.Vector3(1,0,0), 0.5); this.posScatter.applyAxisAngle(new THREE.Vector3(0,0,1), 0.3);
                 } else if (style === 'HELIX') {
-                    const t = Math.random() * 40 - 20; const r = 8 + Math.random() * 2;
-                    const angle = t * 0.5 + (Math.random() > 0.5 ? 0 : Math.PI);
+                    const t = Math.random() * 40 - 20; const r = 8 + Math.random() * 2; const angle = t * 0.5 + (Math.random() > 0.5 ? 0 : Math.PI);
                     this.posScatter.set(Math.cos(angle) * r, t, Math.sin(angle) * r);
                 }
             }
 
             update(dt, mode, viewTarget, time) {
-                let targetPos = new THREE.Vector3(); 
-                let targetScale = this.baseScale;
-
+                let targetPos = new THREE.Vector3(); let targetScale = this.baseScale;
                 if (mode === 'VIEW' && this.mesh === viewTarget) return; 
-                
-                if (mode === 'VIEW') {
-                    targetPos.copy(this.posTree).multiplyScalar(1.3); 
-                    targetScale = this.baseScale * 0.3; 
-                } else if (mode === 'TREE') {
-                    targetPos.copy(this.posTree); targetPos.y += Math.sin(time * 0.5 + this.mesh.id) * 0.08;
-                } else { 
-                    targetPos.copy(this.posScatter); 
-                }
+                if (mode === 'VIEW') { targetPos.copy(this.posTree).multiplyScalar(1.3); targetScale = this.baseScale * 0.3; } 
+                else if (mode === 'TREE') { targetPos.copy(this.posTree); targetPos.y += Math.sin(time * 0.5 + this.mesh.id) * 0.08; } 
+                else { targetPos.copy(this.posScatter); }
 
                 this.mesh.position.lerp(targetPos, 2.5 * dt);
                 this.mesh.scale.setScalar(THREE.MathUtils.lerp(this.mesh.scale.x, targetScale, 4 * dt));
 
                 if (this.type === 'CRYSTAL' || mode === 'SCATTER') {
-                    if (this.type === 'PHOTO' || this.type === 'POEM') {
-                        this.mesh.rotation.x += dt * 0.1; this.mesh.rotation.y += dt * 0.15;
-                    } else {
-                        this.mesh.rotation.x += dt * 0.2; this.mesh.rotation.y += dt * 0.3;
-                    }
+                    if (this.type === 'PHOTO' || this.type === 'POEM') { this.mesh.rotation.x += dt * 0.1; this.mesh.rotation.y += dt * 0.15; } 
+                    else { this.mesh.rotation.x += dt * 0.2; this.mesh.rotation.y += dt * 0.3; }
                 } else if (mode === 'TREE') {
                     if (this.type === 'PHOTO' || this.type === 'POEM') {
                         const angle = Math.atan2(this.mesh.position.x, this.mesh.position.z);
                         const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), angle);
                         this.mesh.quaternion.slerp(q, 5 * dt);
                     } else if (this.type === 'CANE') {
-                        // 让拐杖糖朝向树中心
-                        const targetPos = new THREE.Vector3(0, this.mesh.position.y, 0);
-                        this.mesh.lookAt(targetPos);
+                        const targetPos = new THREE.Vector3(0, this.mesh.position.y, 0); this.mesh.lookAt(targetPos);
                     } else { 
-                        // 树上时缓慢自转
-                        this.mesh.rotation.x = THREE.MathUtils.lerp(this.mesh.rotation.x, 0, dt);
-                        this.mesh.rotation.y += 0.5 * dt; 
+                        this.mesh.rotation.x = THREE.MathUtils.lerp(this.mesh.rotation.x, 0, dt); this.mesh.rotation.y += 0.5 * dt; 
                     }
                 }
                 if (this.type === 'LIGHT' && this.mesh.material && this.mesh.material.emissive) {
@@ -420,42 +503,92 @@
 
         function createParticles() {
             const sphereGeo = new THREE.SphereGeometry(0.35, 32, 32); const crystalGeo = new THREE.OctahedronGeometry(0.3, 0); const lightGeo = new THREE.SphereGeometry(0.18, 16, 16); 
-            
-            // 2. 增加拐杖糖几何
-            const curve = new THREE.CatmullRomCurve3([
-                new THREE.Vector3(0, -0.5, 0), new THREE.Vector3(0, 0.3, 0),
-                new THREE.Vector3(0.1, 0.5, 0), new THREE.Vector3(0.3, 0.4, 0)
-            ]);
+            const curve = new THREE.CatmullRomCurve3([ new THREE.Vector3(0, -0.5, 0), new THREE.Vector3(0, 0.3, 0), new THREE.Vector3(0.1, 0.5, 0), new THREE.Vector3(0.3, 0.4, 0) ]);
             const candyGeo = new THREE.TubeGeometry(curve, 16, 0.08, 8, false);
 
-            const goldMat = new THREE.MeshPhysicalMaterial({ color: CONFIG.colors.gold, metalness: 1.0, roughness: 0.2, clearcoat: 1.0, emissive: 0x553300, emissiveIntensity: 0.2 });
-            const amberMat = new THREE.MeshPhysicalMaterial({ color: CONFIG.colors.warmGold, metalness: 0.6, roughness: 0.2, clearcoat: 1.0, emissive: 0xaa4400, emissiveIntensity: 0.5 });
-            const rubyMat = new THREE.MeshPhysicalMaterial({ color: 0xff3333, metalness: 0.4, roughness: 0.1, clearcoat: 1.0, emissive: 0x880000, emissiveIntensity: 0.6 });
+            const sty = STYLES.GOLD.colors;
+            const goldMat = new THREE.MeshPhysicalMaterial({ color: sty.primary, metalness: 1.0, roughness: 0.2, clearcoat: 1.0, emissive: 0x442200, emissiveIntensity: 0.2 });
+            const amberMat = new THREE.MeshPhysicalMaterial({ color: sty.secondary, metalness: 0.6, roughness: 0.2, clearcoat: 1.0, emissive: 0xaa5500, emissiveIntensity: 0.5 });
+            const rubyMat = new THREE.MeshPhysicalMaterial({ color: sty.accent, metalness: 0.4, roughness: 0.1, clearcoat: 1.0, emissive: 0x880000, emissiveIntensity: 0.6 });
             const crystalMat = new THREE.MeshStandardMaterial({ color: 0xffffee, metalness: 0.9, roughness: 0.0, emissive: 0x332211, emissiveIntensity: 0.3 });
-            const lightMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.warmLight, emissive: CONFIG.colors.warmLight, emissiveIntensity: 3.0, toneMapped: false });
+            const lightMat = new THREE.MeshStandardMaterial({ color: sty.light, emissive: sty.light, emissiveIntensity: 3.0, toneMapped: false });
             const candyMat = new THREE.MeshStandardMaterial({ map: caneTexture, roughness: 0.4 });
 
             for (let i = 0; i < CONFIG.particles.count; i++) {
                 const rand = Math.random(); let mesh, type;
                 if (rand < 0.15) { mesh = new THREE.Mesh(lightGeo, lightMat.clone()); type = 'LIGHT'; }
                 else if (rand < 0.35) { mesh = new THREE.Mesh(crystalGeo, crystalMat); mesh.scale.setScalar(0.8+Math.random()*0.4); type = 'CRYSTAL'; }
-                // 3. 加入拐杖糖 (3% 概率, 减少数量)
                 else if (rand < 0.38) { mesh = new THREE.Mesh(candyGeo, candyMat); mesh.scale.setScalar(0.8); type = 'CANE'; }
-                else if (rand < 0.70) { mesh = new THREE.Mesh(sphereGeo, goldMat); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'DECO'; }
-                else if (rand < 0.85) { mesh = new THREE.Mesh(sphereGeo, amberMat); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'DECO'; }
-                else { mesh = new THREE.Mesh(sphereGeo, rubyMat); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'DECO'; }
+                else if (rand < 0.70) { mesh = new THREE.Mesh(sphereGeo, goldMat.clone()); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'PRIMARY'; }
+                else if (rand < 0.85) { mesh = new THREE.Mesh(sphereGeo, amberMat.clone()); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'SECONDARY'; }
+                else { mesh = new THREE.Mesh(sphereGeo, rubyMat.clone()); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'ACCENT'; }
                 mainGroup.add(mesh); particleSystem.push(new Particle(mesh, type));
             }
-            const starGeo = new THREE.OctahedronGeometry(1.6, 0); const starMat = new THREE.MeshBasicMaterial({ color: 0xffffee }); 
+            
+            const starShape = createStarShape(1.8, 0.9, 5); 
+            const extrudeSettings = { depth: 0.4, bevelEnabled: true, bevelThickness: 0.1, bevelSize: 0.1, bevelSegments: 3 };
+            const starGeo = new THREE.ExtrudeGeometry(starShape, extrudeSettings); starGeo.center(); 
+            const starMat = new THREE.MeshStandardMaterial({ color: 0xffdd44, emissive: 0xffaa00, emissiveIntensity: 2.0, metalness: 0.8, roughness: 0.2 });
             const star = new THREE.Mesh(starGeo, starMat); star.position.set(0, CONFIG.particles.treeHeight/2 + 1.2, 0);
-            const glowGeo = new THREE.OctahedronGeometry(2.2, 0); const glowMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
-            const starGlow = new THREE.Mesh(glowGeo, glowMat); star.add(starGlow); mainGroup.add(star);
-            const animateStar = () => { const t = Date.now()*0.001; star.rotation.y = t*0.5; starGlow.scale.setScalar(1+Math.sin(t*1.5)*0.1); requestAnimationFrame(animateStar); }; animateStar();
+            star.userData = { type: 'STAR' }; 
+            mainGroup.add(star);
+            
+            const animateStar = () => { const t = Date.now()*0.001; star.rotation.y = t*0.5; requestAnimationFrame(animateStar); }; animateStar();
+        }
+
+        function toggleStyle(e) {
+            e.stopPropagation(); 
+            const currentIndex = STYLE_KEYS.indexOf(currentStyleKey);
+            const nextIndex = (currentIndex + 1) % STYLE_KEYS.length;
+            currentStyleKey = STYLE_KEYS[nextIndex];
+            const newStyle = STYLES[currentStyleKey];
+            
+            document.getElementById('style-btn').textContent = `🎨 Style: ${newStyle.name}`;
+            document.body.style.background = newStyle.bg;
+            const uiLayer = document.getElementById('ui-layer');
+            uiLayer.className = newStyle.uiClass;
+            
+            particleSystem.forEach(p => {
+                const mat = p.mesh.material;
+                if (!mat) return;
+                
+                if (p.type === 'PRIMARY') { 
+                    mat.color.setHex(newStyle.colors.primary);
+                    mat.emissive.setHex(currentStyleKey === 'LAIN' ? 0xffffff : 0x442200);
+                    mat.emissiveIntensity = currentStyleKey === 'LAIN' ? 0.5 : 0.2;
+                } 
+                else if (p.type === 'SECONDARY') { 
+                    mat.color.setHex(newStyle.colors.secondary);
+                    mat.emissive.setHex(currentStyleKey === 'LAIN' ? 0xaaaaaa : 0xaa5500);
+                } 
+                else if (p.type === 'ACCENT') { 
+                    mat.color.setHex(newStyle.colors.accent);
+                    mat.emissive.setHex(newStyle.colors.accent);
+                    mat.emissiveIntensity = currentStyleKey === 'LAIN' ? 0.8 : 0.4;
+                }
+                else if (p.type === 'LIGHT') { 
+                    mat.color.setHex(newStyle.colors.light);
+                    mat.emissive.setHex(newStyle.colors.light);
+                    mat.emissiveIntensity = currentStyleKey === 'LAIN' ? 2.0 : 3.0; 
+                }
+                else if (p.type === 'CRYSTAL') {
+                     if(currentStyleKey === 'LAIN') mat.color.setHex(0xff0000);
+                     else mat.color.setHex(0xffffee);
+                }
+            });
+
+            const star = mainGroup.children.find(c => c.userData.type === 'STAR');
+            if (star) {
+                const starColor = currentStyleKey === 'LAIN' ? 0xff0000 : 0xffdd44;
+                star.material.color.setHex(starColor);
+                star.material.emissive.setHex(starColor);
+            }
+            bloomPass.strength = newStyle.bloomStrength;
         }
 
         function createSnow() {
             const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const ctx = canvas.getContext('2d');
-            const grad = ctx.createRadialGradient(32,32,0, 32,32,32); grad.addColorStop(0, 'rgba(255,245,230,0.8)'); grad.addColorStop(0.4, 'rgba(255,230,200,0.2)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+            const grad = ctx.createRadialGradient(32,32,0, 32,32,32); grad.addColorStop(0, 'rgba(255,255,255,0.8)'); grad.addColorStop(0.4, 'rgba(255,255,255,0.2)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
             ctx.fillStyle = grad; ctx.fillRect(0,0,64,64); const texture = new THREE.CanvasTexture(canvas);
             const geo = new THREE.BufferGeometry(); const pos = []; const v = []; 
             for(let i=0; i<800; i++) { pos.push((Math.random()-0.5)*60, (Math.random()-0.5)*60, (Math.random()-0.5)*60); v.push((Math.random()*0.3)+0.2); }
@@ -466,15 +599,36 @@
 
         function updateSnow() {
             if (!STATE.snowEnabled) return;
+            
+            // 🎶 获取音频能量来控制雪花
+            let speedMultiplier = 1.0;
+            let turbulence = 0.01;
+            
+            if (analyser) {
+                analyser.getByteFrequencyData(dataArray);
+                // 计算低频能量 (Bass)
+                let bassSum = 0;
+                for(let i = 0; i < 20; i++) bassSum += dataArray[i];
+                const bassLevel = bassSum / 20 / 256; // 0.0 - 1.0
+                
+                speedMultiplier = 1.0 + bassLevel * 4.0; // 低音越强，下落越快
+                turbulence = 0.01 + bassLevel * 0.05;    // 增加扰动
+            }
+
             snowGroup.children.forEach(points => {
                 const positions = points.geometry.attributes.position.array; const velocities = points.userData.velocities;
                 for(let i=0; i < positions.length; i+=3) {
-                    positions[i+1] -= velocities[i/3] * 0.03; positions[i] += Math.sin(clock.elapsedTime*0.5+i)*0.01; 
+                    // 应用音乐速度因子
+                    positions[i+1] -= velocities[i/3] * 0.03 * speedMultiplier; 
+                    // 应用音乐扰动
+                    positions[i] += Math.sin(clock.elapsedTime*0.5+i) * turbulence; 
                     if(positions[i+1] < -30) positions[i+1] = 30;
                 }
                 points.geometry.attributes.position.needsUpdate = true;
             });
+            
             snowGroup.rotation.y += 0.001;
+            starFieldGroup.rotation.y += 0.0005;
         }
 
         function loadPreloadedPhotos() {
@@ -495,21 +649,15 @@
         function loadPoems() {
             POEMS.forEach(poem => {
                 const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 1200; const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#e3d0b0'; 
-                ctx.fillRect(0,0,1024,1200);
-                
-                ctx.fillStyle = 'rgba(100, 80, 60, 0.08)'; 
-                for(let i=0; i<8000; i++) { ctx.fillRect(Math.random()*1024, Math.random()*1200, 2, 2); }
-
+                ctx.fillStyle = '#e3d0b0'; ctx.fillRect(0,0,1024,1200);
+                ctx.fillStyle = 'rgba(100, 80, 60, 0.08)'; for(let i=0; i<8000; i++) { ctx.fillRect(Math.random()*1024, Math.random()*1200, 2, 2); }
                 ctx.strokeStyle = '#8b5a2b'; ctx.lineWidth = 15; ctx.strokeRect(30, 30, 964, 1140); 
                 ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 5; ctx.strokeRect(50, 50, 924, 1100);
-                
                 ctx.fillStyle = '#3e2723'; ctx.textAlign = 'center';
-                ctx.font = 'bold 100px "Cinzel", serif'; ctx.fillText(poem.title, 512, 240);
-                ctx.beginPath(); ctx.moveTo(312, 300); ctx.lineTo(712, 300); ctx.strokeStyle = '#3e2723'; ctx.lineWidth=3; ctx.stroke();
-                
-                ctx.font = '64px "Ma Shan Zheng", serif'; const lines = poem.lines.split('\n'); let y = 440;
-                lines.forEach(line => { ctx.fillText(line, 512, y); y += 120; });
+                ctx.font = 'bold 80px "Cinzel", serif'; ctx.fillText(poem.title, 512, 180);
+                ctx.beginPath(); ctx.moveTo(312, 230); ctx.lineTo(712, 230); ctx.strokeStyle = '#3e2723'; ctx.lineWidth=3; ctx.stroke();
+                ctx.font = '48px "Ma Shan Zheng", serif'; const rawLines = poem.lines.split('\n'); let y = 350;
+                rawLines.forEach(line => { ctx.fillText(line, 512, y); y += 70; });
                 const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
                 createCard(tex, 'POEM');
             });
@@ -526,18 +674,30 @@
         }
 
         function createCard(texture, type) {
-            const width = 1.3, height = 1.6; const group = new THREE.Group();
+            const group = new THREE.Group();
             group.renderOrder = 999; 
+            
+            // 智能尺寸计算
+            const img = texture.image;
+            let width = 1.3;  
+            let height = 1.6; 
+
+            if (img && img.width && img.height) {
+                const aspect = img.height / img.width;
+                height = width * aspect;
+                if (height > 2.2) height = 2.2; 
+            }
+
             const frameGeo = new THREE.BoxGeometry(width + 0.2, height + 0.2, 0.06);
-            const frameMat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.gold, metalness: 1.0, roughness: 0.15, emissive: 0x332200, emissiveIntensity: 0.2 });
+            const frameMat = new THREE.MeshStandardMaterial({ color: STYLES.GOLD.colors.primary, metalness: 1.0, roughness: 0.15, emissive: 0x332200, emissiveIntensity: 0.2 });
             const frame = new THREE.Mesh(frameGeo, frameMat); 
             frame.userData = { parentGroup: group }; 
+            frame.name = "FRAME_MESH"; 
             group.add(frame);
             interactableObjects.push(frame); 
             
             const contentGeo = new THREE.PlaneGeometry(width, height);
             let contentMat;
-            
             if (type === 'POEM') {
                 contentMat = new THREE.MeshBasicMaterial({ map: texture, toneMapped: false, side: THREE.DoubleSide });
             } else {
@@ -548,7 +708,10 @@
             interactableObjects.push(content); content.userData = { parentGroup: group }; 
 
             if (type === 'PHOTO') {
-                const textMesh = createTextOverlay(); textMesh.position.set(0.35, -0.75, 0.06); textMesh.rotation.z = 0.05; group.add(textMesh);
+                const textMesh = createTextOverlay(); 
+                textMesh.position.set(width * 0.3, -height * 0.45, 0.06); 
+                textMesh.rotation.z = 0.05; 
+                group.add(textMesh);
             }
             const s = 1.3; group.scale.set(s,s,s); group.userData = { isInteractable: true, type: type };
             mainGroup.add(group); 
@@ -560,13 +723,10 @@
                 updateCameraPosition();
                 renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
             });
-            // 绑定到 document 以确保事件不被遮挡
-            // 使用 passive: false 以便我们可以调用 preventDefault
             document.addEventListener('touchstart', onTouchStart, {passive: false}); 
             document.addEventListener('touchmove', onTouchMove, {passive: false}); 
             document.addEventListener('touchend', onTouchEnd, {passive: false});
             
-            // 鼠标事件保持不变
             document.addEventListener('mousedown', onMouseDown); 
             document.addEventListener('mousemove', onMouseMove); 
             document.addEventListener('mouseup', onMouseUp);
@@ -583,30 +743,62 @@
                     reader.readAsDataURL(e.target.files[0]);
                 }
             });
-            const musicBtn = document.getElementById('music-btn'); const bgm = document.getElementById('bgm');
-            musicBtn.addEventListener('click', () => {
+            const musicBtn = document.getElementById('music-btn'); 
+            const bgm = document.getElementById('bgm');
+            musicBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); 
                 if (bgm.paused) { bgm.play(); musicBtn.textContent = '🎵 Music: ON'; musicBtn.classList.remove('active'); } 
                 else { bgm.pause(); musicBtn.textContent = '🔇 Music: OFF'; musicBtn.classList.add('active'); }
             });
+
+            const nextBtn = document.getElementById('next-bgm-btn');
+            nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                currentBgmIndex = (currentBgmIndex + 1) % BGM_LIST.length;
+                bgm.src = BGM_LIST[currentBgmIndex];
+                bgm.play()
+                    .then(() => {
+                        musicBtn.textContent = '🎵 Music: ON';
+                        musicBtn.classList.remove('active');
+                    })
+                    .catch(e => console.log("Play error", e));
+            });
+
+            const styleBtn = document.getElementById('style-btn');
+            styleBtn.addEventListener('click', toggleStyle);
         }
 
         // ==========================================
-        // 🔧 核心修复：重写触摸逻辑，确保点击有效且不冲突
+        // 🎵 音频初始化逻辑
         // ==========================================
+        function initAudio(audioElement) {
+            try {
+                if (audioCtx) return; // 避免重复初始化
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                const source = audioCtx.createMediaElementSource(audioElement);
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination);
+            } catch(e) {
+                console.warn("Web Audio API Error (CORS likely):", e);
+            }
+        }
 
         function onTouchStart(e) {
-            // 如果点在按钮上，允许默认行为，不拦截
             if (e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') {
                 return;
             }
-            // 记录初始位置
             const t = e.touches[0];
             STATE.startX = t.clientX;
             STATE.startY = t.clientY;
             STATE.lastX = t.clientX;
             STATE.lastY = t.clientY;
             STATE.touchStartTime = Date.now();
-            STATE.isDragging = false; // 初始假设为点击，直到移动超过阈值
+            STATE.isDragging = false; 
         }
 
         function onMouseDown(e) { 
@@ -619,23 +811,17 @@
 
         function onTouchMove(e) {
             if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') { 
-                if(e.cancelable) e.preventDefault(); // 防止滚动
+                if(e.cancelable) e.preventDefault(); 
             }
-            
             const t = e.touches[0];
             const dx = t.clientX - STATE.lastX;
             const dy = t.clientY - STATE.lastY;
-            
-            // 只有当移动距离超过 5px 时，才判定为拖拽
-            // 这样可以防止手指按下的微小抖动被误判为拖拽
             if (!STATE.isDragging && Math.hypot(t.clientX - STATE.startX, t.clientY - STATE.startY) > 5) {
                 STATE.isDragging = true;
             }
-
             if (STATE.isDragging) {
                 handleMoveLogic(dx, dy);
             }
-            
             STATE.lastX = t.clientX;
             STATE.lastY = t.clientY;
         }
@@ -654,9 +840,7 @@
         }
 
         function handleMoveLogic(deltaX, deltaY) {
-            // 移动端灵敏度调整
             const sensitivity = window.innerWidth < 600 ? 0.007 : 0.005;
-
             if (STATE.mode === 'VIEW') {
                 STATE.viewRotation.y += deltaX * sensitivity;
                 STATE.viewRotation.x += deltaY * sensitivity;
@@ -670,15 +854,15 @@
         }
 
         function onTouchEnd(e) {
-            // 如果不是拖拽（即移动很小），则视为点击
+            if (e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
             if (!STATE.isDragging) {
-                // 使用 startX/Y 进行检测，因为 touchend 没有 touches 坐标
                 checkIntersection(STATE.startX, STATE.startY);
             }
             STATE.isDragging = false;
         }
 
         function onMouseUp(e) {
+            if (e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
             if (!STATE.isDragging) {
                 checkIntersection(e.clientX, e.clientY);
             }
@@ -729,7 +913,6 @@
             playSoundEffect('chime');
         }
 
-        function initAudio() { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} }
         function playSoundEffect(type) {
             if (!audioCtx || audioCtx.state === 'suspended') { if(audioCtx) audioCtx.resume(); return; }
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); const t = audioCtx.currentTime;
@@ -780,10 +963,12 @@
                 const baseScale = window.innerWidth < 600 ? 1.5 : 2.2;
                 const s = baseScale + Math.sin(time) * 0.02; STATE.viewTarget.scale.lerp(new THREE.Vector3(s, s, s), 4 * dt);
                 
-                bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.0, 5 * dt);
+                // 动态 Bloom 控制
+                const targetBloom = STATE.mode === 'VIEW' ? 0.0 : STYLES[currentStyleKey].bloomStrength;
+                bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, targetBloom, 5 * dt);
                 renderer.toneMappingExposure = THREE.MathUtils.lerp(renderer.toneMappingExposure, 0.8, 5 * dt);
             } else {
-                bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.7, 2 * dt);
+                bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, STYLES[currentStyleKey].bloomStrength, 2 * dt);
                 renderer.toneMappingExposure = THREE.MathUtils.lerp(renderer.toneMappingExposure, 1.1, 2 * dt);
             }
             composer.render();
