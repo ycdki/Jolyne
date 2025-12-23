@@ -194,7 +194,7 @@
         const startOverlay = document.getElementById('start-overlay');
         startOverlay.addEventListener('click', async () => {
             const bgm = document.getElementById('bgm');
-            bgm.volume = 0.3; try { bgm.play(); } catch(e) {}
+            bgm.volume = 0.1; try { bgm.play(); } catch(e) {}
             initAudio(); 
             startOverlay.style.opacity = 0;
             setTimeout(() => startOverlay.remove(), 1200);
