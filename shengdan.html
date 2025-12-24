@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Merry Christmas - View Fixed</title>
+    <title>Merry Christmas - Final Fixed</title>
     <style>
         body { 
             margin: 0; overflow: hidden; 
@@ -152,19 +152,14 @@
         /* View Overlay - 经典左右渐变金 */
         #view-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(90deg, 
-                rgba(0,0,0,0.98) 0%, 
-                rgba(20, 10, 0, 0.6) 20%, 
-                rgba(255, 200, 100, 0.05) 50%, 
-                rgba(20, 10, 0, 0.6) 80%, 
-                rgba(0,0,0,0.98) 100%
-            );
+            /* 左右线性渐变：黑 -> 暖透 -> 黑 */
+            background: none; /* 移除 CSS 背景，使用 3D 背景 */
             z-index: 5; opacity: 0; 
-            pointer-events: none; /* 👈 关键修复：允许点击穿透 */
-            transition: opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            pointer-events: none; /* 允许穿透 */
+            transition: opacity 0.8s ease-in-out; 
             display: flex; align-items: flex-end; justify-content: center; padding-bottom: 80px;
         }
-        #view-overlay.active { opacity: 1; /* 保持 pointer-events: none 以便操作 */ }
+        #view-overlay.active { opacity: 1; }
         
         .close-hint { 
             color: rgba(255,220,180,0.8); font-size: 14px; letter-spacing: 3px; 
@@ -244,6 +239,14 @@
             }
         };
 
+        // 🎄 4种圣诞树配色方案 (Classic, Frozen, Passion, Dream)
+        const TREE_VARIANTS = [
+            { name: "Classic", primary: 0x2e8b57, secondary: 0xffaa00, accent: 0xff0000 }, 
+            { name: "Frozen",  primary: 0x88ccff, secondary: 0xffffff, accent: 0x004488 }, 
+            { name: "Passion", primary: 0xaa0000, secondary: 0xff4400, accent: 0xffd700 }, 
+            { name: "Dream",   primary: 0xff66cc, secondary: 0x00ffff, accent: 0xffffff }  
+        ];
+
         let currentStyleKey = 'GOLD';
         const STYLE_KEYS = ['GOLD', 'GREEN', 'LAIN'];
 
@@ -288,8 +291,9 @@
             startX: 0, startY: 0, lastX: 0, lastY: 0, touchStartTime: 0,
             snowEnabled: true,
             isPaused: false,
-            // 💥 新增：爆发状态控制
-            isBursting: false, burstTime: 0
+            // 💥 爆发状态控制
+            isBursting: false, burstTime: 0,
+            treeVariantIndex: 0
         };
 
         let scene, camera, renderer, composer, bloomPass; 
@@ -302,7 +306,7 @@
         let audioCtx, analyser, dataArray; 
         let caneTexture; 
         const occupiedSpace = [];
-        let visualizerLine;
+        let viewBackdrop; // 3D 背景
 
         async function loadFonts() {
             const fontName = 'Great Vibes';
@@ -320,9 +324,10 @@
             initThree(); 
             setupEnvironment(); 
             createCaneTexture(); 
-            createParticles(); 
-            createSnow();   
+            createParticles();  // FIX: 恢复调用
+            createSnow();       // FIX: 恢复调用
             createBackgroundStars(); 
+            createViewBackdrop();
             
             loadPreloadedPhotos(); loadPoems();
             setupPostProcessing(); setupInteractions(); 
@@ -407,6 +412,41 @@
             composer.addPass(renderScene); composer.addPass(bloomPass);
         }
 
+        // 🌟 创建 3D 氛围背景
+        function createViewBackdrop() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            // 绘制“左右金、中间黑”的渐变
+            const gradient = ctx.createLinearGradient(0, 0, 512, 0);
+            gradient.addColorStop(0, 'rgba(255, 160, 60, 0.3)');
+            gradient.addColorStop(0.3, 'rgba(0, 0, 0, 0.9)');
+            gradient.addColorStop(0.5, 'rgba(0, 0, 0, 1.0)');
+            gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.9)');
+            gradient.addColorStop(1, 'rgba(255, 160, 60, 0.3)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0,0,512,512);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            const mat = new THREE.MeshBasicMaterial({ 
+                map: tex, 
+                transparent: true, 
+                opacity: 0, 
+                depthWrite: false, 
+                depthTest: false,  
+                side: THREE.DoubleSide
+            });
+            const geo = new THREE.PlaneGeometry(120, 90); 
+            viewBackdrop = new THREE.Mesh(geo, mat);
+            viewBackdrop.position.set(0, 0, -60); 
+            viewBackdrop.renderOrder = -1; 
+            
+            camera.add(viewBackdrop);
+            scene.add(camera); 
+        }
+
         // ==========================================
         // 🎵 音频初始化逻辑
         // ==========================================
@@ -456,6 +496,69 @@
                 if (i === 0) shape.moveTo(r * Math.cos(a), r * Math.sin(a)); else shape.lineTo(r * Math.cos(a), r * Math.sin(a));
             }
             shape.closePath(); return shape;
+        }
+
+        // FIX: 恢复 createParticles 函数
+        function createParticles() {
+            const sphereGeo = new THREE.SphereGeometry(0.35, 32, 32); const crystalGeo = new THREE.OctahedronGeometry(0.3, 0); const lightGeo = new THREE.SphereGeometry(0.18, 16, 16); 
+            const curve = new THREE.CatmullRomCurve3([ new THREE.Vector3(0, -0.5, 0), new THREE.Vector3(0, 0.3, 0), new THREE.Vector3(0.1, 0.5, 0), new THREE.Vector3(0.3, 0.4, 0) ]);
+            const candyGeo = new THREE.TubeGeometry(curve, 16, 0.08, 8, false);
+
+            // 初始使用 Classic 变种颜色
+            const variant = TREE_VARIANTS[0];
+            const goldMat = new THREE.MeshPhysicalMaterial({ color: variant.primary, metalness: 1.0, roughness: 0.2, clearcoat: 1.0, emissive: 0x442200, emissiveIntensity: 0.2 });
+            const amberMat = new THREE.MeshPhysicalMaterial({ color: variant.secondary, metalness: 0.6, roughness: 0.2, clearcoat: 1.0, emissive: 0xaa5500, emissiveIntensity: 0.5 });
+            const rubyMat = new THREE.MeshPhysicalMaterial({ color: variant.accent, metalness: 0.4, roughness: 0.1, clearcoat: 1.0, emissive: 0x880000, emissiveIntensity: 0.6 });
+            
+            const crystalMat = new THREE.MeshStandardMaterial({ color: 0xffffee, metalness: 0.9, roughness: 0.0, emissive: 0x332211, emissiveIntensity: 0.3 });
+            const lightMat = new THREE.MeshStandardMaterial({ color: STYLES.GOLD.colors.light, emissive: STYLES.GOLD.colors.light, emissiveIntensity: 3.0, toneMapped: false });
+            const candyMat = new THREE.MeshStandardMaterial({ map: caneTexture, roughness: 0.4 });
+
+            for (let i = 0; i < CONFIG.particles.count; i++) {
+                const rand = Math.random(); let mesh, type;
+                if (rand < 0.15) { mesh = new THREE.Mesh(lightGeo, lightMat.clone()); type = 'LIGHT'; }
+                else if (rand < 0.35) { mesh = new THREE.Mesh(crystalGeo, crystalMat); mesh.scale.setScalar(0.8+Math.random()*0.4); type = 'CRYSTAL'; }
+                else if (rand < 0.38) { mesh = new THREE.Mesh(candyGeo, candyMat); mesh.scale.setScalar(0.8); type = 'CANE'; }
+                else if (rand < 0.70) { mesh = new THREE.Mesh(sphereGeo, goldMat.clone()); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'PRIMARY'; }
+                else if (rand < 0.85) { mesh = new THREE.Mesh(sphereGeo, amberMat.clone()); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'SECONDARY'; }
+                else { mesh = new THREE.Mesh(sphereGeo, rubyMat.clone()); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'ACCENT'; }
+                mainGroup.add(mesh); particleSystem.push(new Particle(mesh, type));
+            }
+            
+            const starShape = createStarShape(1.8, 0.9, 5); 
+            const extrudeSettings = { depth: 0.4, bevelEnabled: true, bevelThickness: 0.1, bevelSize: 0.1, bevelSegments: 3 };
+            const starGeo = new THREE.ExtrudeGeometry(starShape, extrudeSettings); starGeo.center(); 
+            const starMat = new THREE.MeshStandardMaterial({ color: 0xffdd44, emissive: 0xffaa00, emissiveIntensity: 2.0, metalness: 0.8, roughness: 0.2 });
+            const star = new THREE.Mesh(starGeo, starMat); star.position.set(0, CONFIG.particles.treeHeight/2 + 1.2, 0);
+            star.userData = { type: 'STAR' }; 
+            mainGroup.add(star);
+            
+            const animateStar = () => { const t = Date.now()*0.001; star.rotation.y = t*0.5; requestAnimationFrame(animateStar); }; animateStar();
+        }
+
+        // FIX: 恢复 createSnow 函数
+        function createSnow() {
+            const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(32,32,0, 32,32,32); grad.addColorStop(0, 'rgba(255,255,255,0.8)'); grad.addColorStop(0.4, 'rgba(255,255,255,0.2)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad; ctx.fillRect(0,0,64,64); const texture = new THREE.CanvasTexture(canvas);
+            const geo = new THREE.BufferGeometry(); const pos = []; const v = []; 
+            for(let i=0; i<800; i++) { pos.push((Math.random()-0.5)*60, (Math.random()-0.5)*60, (Math.random()-0.5)*60); v.push((Math.random()*0.3)+0.2); }
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            const mat = new THREE.PointsMaterial({ map: texture, size: 0.8, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffeedd });
+            const points = new THREE.Points(geo, mat); points.userData = { velocities: v }; snowGroup.add(points);
+        }
+
+        // 恢复 applyTreeVariant 函数
+        function applyTreeVariant(index) {
+            const variant = TREE_VARIANTS[index % TREE_VARIANTS.length];
+            particleSystem.forEach(p => {
+                if (p.type === 'PRIMARY') p.mesh.material.color.setHex(variant.primary);
+                else if (p.type === 'SECONDARY') p.mesh.material.color.setHex(variant.secondary);
+                else if (p.type === 'ACCENT') {
+                    p.mesh.material.color.setHex(variant.accent);
+                    p.mesh.material.emissive.setHex(variant.accent);
+                }
+            });
         }
 
         class Particle {
@@ -529,10 +632,9 @@
                 // 💥 增强的粒子缩放脉冲
                 let pulse = 1.0;
                 if (STATE.isBursting) {
-                    const progress = STATE.burstTime; // 0 to 1
-                    // 先快速放大再回缩
+                    const progress = STATE.burstTime; 
                     const factor = Math.sin(progress * Math.PI); 
-                    pulse = 1.0 + factor * 0.5; // 放大 1.5 倍
+                    pulse = 1.0 + factor * 0.5; 
                 }
 
                 this.mesh.scale.setScalar(THREE.MathUtils.lerp(this.mesh.scale.x, targetScale * pulse, 4 * dt));
@@ -553,334 +655,37 @@
                 }
                 if (this.type === 'LIGHT' && this.mesh.material && this.mesh.material.emissive) {
                     const intensity = 0.5 + 0.5 * Math.sin(time * this.twinkleSpeed + this.twinklePhase);
-                    // 爆发时更亮
                     const burstBoost = STATE.isBursting ? 1.0 : 0.0;
                     this.mesh.material.emissiveIntensity = this.emissiveIntensityMax * (0.5 + intensity * 1.5 + burstBoost); 
                 }
             }
         }
 
-        function createParticles() {
-            const sphereGeo = new THREE.SphereGeometry(0.35, 32, 32); const crystalGeo = new THREE.OctahedronGeometry(0.3, 0); const lightGeo = new THREE.SphereGeometry(0.18, 16, 16); 
-            const curve = new THREE.CatmullRomCurve3([ new THREE.Vector3(0, -0.5, 0), new THREE.Vector3(0, 0.3, 0), new THREE.Vector3(0.1, 0.5, 0), new THREE.Vector3(0.3, 0.4, 0) ]);
-            const candyGeo = new THREE.TubeGeometry(curve, 16, 0.08, 8, false);
-
-            const sty = STYLES.GOLD.colors;
-            const goldMat = new THREE.MeshPhysicalMaterial({ color: sty.primary, metalness: 1.0, roughness: 0.2, clearcoat: 1.0, emissive: 0x442200, emissiveIntensity: 0.2 });
-            const amberMat = new THREE.MeshPhysicalMaterial({ color: sty.secondary, metalness: 0.6, roughness: 0.2, clearcoat: 1.0, emissive: 0xaa5500, emissiveIntensity: 0.5 });
-            const rubyMat = new THREE.MeshPhysicalMaterial({ color: sty.accent, metalness: 0.4, roughness: 0.1, clearcoat: 1.0, emissive: 0x880000, emissiveIntensity: 0.6 });
-            const crystalMat = new THREE.MeshStandardMaterial({ color: 0xffffee, metalness: 0.9, roughness: 0.0, emissive: 0x332211, emissiveIntensity: 0.3 });
-            const lightMat = new THREE.MeshStandardMaterial({ color: sty.light, emissive: sty.light, emissiveIntensity: 3.0, toneMapped: false });
-            const candyMat = new THREE.MeshStandardMaterial({ map: caneTexture, roughness: 0.4 });
-
-            for (let i = 0; i < CONFIG.particles.count; i++) {
-                const rand = Math.random(); let mesh, type;
-                if (rand < 0.15) { mesh = new THREE.Mesh(lightGeo, lightMat.clone()); type = 'LIGHT'; }
-                else if (rand < 0.35) { mesh = new THREE.Mesh(crystalGeo, crystalMat); mesh.scale.setScalar(0.8+Math.random()*0.4); type = 'CRYSTAL'; }
-                else if (rand < 0.38) { mesh = new THREE.Mesh(candyGeo, candyMat); mesh.scale.setScalar(0.8); type = 'CANE'; }
-                else if (rand < 0.70) { mesh = new THREE.Mesh(sphereGeo, goldMat.clone()); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'PRIMARY'; }
-                else if (rand < 0.85) { mesh = new THREE.Mesh(sphereGeo, amberMat.clone()); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'SECONDARY'; }
-                else { mesh = new THREE.Mesh(sphereGeo, rubyMat.clone()); mesh.scale.setScalar(0.6+Math.random()*0.6); type = 'ACCENT'; }
-                mainGroup.add(mesh); particleSystem.push(new Particle(mesh, type));
-            }
-            
-            const starShape = createStarShape(1.8, 0.9, 5); 
-            const extrudeSettings = { depth: 0.4, bevelEnabled: true, bevelThickness: 0.1, bevelSize: 0.1, bevelSegments: 3 };
-            const starGeo = new THREE.ExtrudeGeometry(starShape, extrudeSettings); starGeo.center(); 
-            const starMat = new THREE.MeshStandardMaterial({ color: 0xffdd44, emissive: 0xffaa00, emissiveIntensity: 2.0, metalness: 0.8, roughness: 0.2 });
-            const star = new THREE.Mesh(starGeo, starMat); star.position.set(0, CONFIG.particles.treeHeight/2 + 1.2, 0);
-            star.userData = { type: 'STAR' }; 
-            mainGroup.add(star);
-            
-            const animateStar = () => { const t = Date.now()*0.001; star.rotation.y = t*0.5; requestAnimationFrame(animateStar); }; animateStar();
-        }
-
-        function toggleStyle(e) {
-            e.stopPropagation(); 
-            const currentIndex = STYLE_KEYS.indexOf(currentStyleKey);
-            const nextIndex = (currentIndex + 1) % STYLE_KEYS.length;
-            currentStyleKey = STYLE_KEYS[nextIndex];
-            const newStyle = STYLES[currentStyleKey];
-            
-            document.getElementById('style-btn').textContent = `🎨 Style: ${newStyle.name}`;
-            document.body.style.background = newStyle.bg;
-            const uiLayer = document.getElementById('ui-layer');
-            uiLayer.className = newStyle.uiClass;
-            
-            particleSystem.forEach(p => {
-                const mat = p.mesh.material;
-                if (!mat) return;
-                
-                if (p.type === 'PRIMARY') { 
-                    mat.color.setHex(newStyle.colors.primary);
-                    mat.emissive.setHex(currentStyleKey === 'LAIN' ? 0xffffff : 0x442200);
-                    mat.emissiveIntensity = currentStyleKey === 'LAIN' ? 0.5 : 0.2;
-                } 
-                else if (p.type === 'SECONDARY') { 
-                    mat.color.setHex(newStyle.colors.secondary);
-                    mat.emissive.setHex(currentStyleKey === 'LAIN' ? 0xaaaaaa : 0xaa5500);
-                } 
-                else if (p.type === 'ACCENT') { 
-                    mat.color.setHex(newStyle.colors.accent);
-                    mat.emissive.setHex(newStyle.colors.accent);
-                    mat.emissiveIntensity = currentStyleKey === 'LAIN' ? 0.8 : 0.4;
-                }
-                else if (p.type === 'LIGHT') { 
-                    mat.color.setHex(newStyle.colors.light);
-                    mat.emissive.setHex(newStyle.colors.light);
-                    mat.emissiveIntensity = currentStyleKey === 'LAIN' ? 2.0 : 3.0; 
-                }
-                else if (p.type === 'CRYSTAL') {
-                     if(currentStyleKey === 'LAIN') mat.color.setHex(0xff0000);
-                     else mat.color.setHex(0xffffee);
-                }
-            });
-
-            const star = mainGroup.children.find(c => c.userData.type === 'STAR');
-            if (star) {
-                const starColor = currentStyleKey === 'LAIN' ? 0xff0000 : 0xffdd44;
-                star.material.color.setHex(starColor);
-                star.material.emissive.setHex(starColor);
-            }
-            bloomPass.strength = newStyle.bloomStrength;
-        }
-
-        function createSnow() {
-            const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const ctx = canvas.getContext('2d');
-            const grad = ctx.createRadialGradient(32,32,0, 32,32,32); grad.addColorStop(0, 'rgba(255,255,255,0.8)'); grad.addColorStop(0.4, 'rgba(255,255,255,0.2)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
-            ctx.fillStyle = grad; ctx.fillRect(0,0,64,64); const texture = new THREE.CanvasTexture(canvas);
-            const geo = new THREE.BufferGeometry(); const pos = []; const v = []; 
-            for(let i=0; i<800; i++) { pos.push((Math.random()-0.5)*60, (Math.random()-0.5)*60, (Math.random()-0.5)*60); v.push((Math.random()*0.3)+0.2); }
-            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-            const mat = new THREE.PointsMaterial({ map: texture, size: 0.8, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffeedd });
-            const points = new THREE.Points(geo, mat); points.userData = { velocities: v }; snowGroup.add(points);
-        }
-
-        function updateSnow() {
-            if (!STATE.snowEnabled) return;
-            
-            let speedMultiplier = 1.0;
-            let turbulence = 0.01;
-            
-            if (analyser) {
-                analyser.getByteFrequencyData(dataArray);
-                let bassSum = 0;
-                for(let i = 0; i < 20; i++) bassSum += dataArray[i];
-                const bassLevel = bassSum / 20 / 256; 
-                
-                speedMultiplier = 1.0 + bassLevel * 4.0; 
-                turbulence = 0.01 + bassLevel * 0.05;    
-            }
-
-            snowGroup.children.forEach(points => {
-                const positions = points.geometry.attributes.position.array; const velocities = points.userData.velocities;
-                for(let i=0; i < positions.length; i+=3) {
-                    positions[i+1] -= velocities[i/3] * 0.03 * speedMultiplier; 
-                    positions[i] += Math.sin(clock.elapsedTime*0.5+i) * turbulence; 
-                    if(positions[i+1] < -30) positions[i+1] = 30;
-                }
-                points.geometry.attributes.position.needsUpdate = true;
-            });
-            snowGroup.rotation.y += 0.001;
-            starFieldGroup.rotation.y += 0.0005;
-        }
-
-        function loadPreloadedPhotos() {
-            const loader = new THREE.TextureLoader();
-            FRIEND_PHOTOS.forEach(url => {
-                loader.load(url, (t) => {
-                    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.minFilter = THREE.LinearFilter; t.magFilter = THREE.LinearFilter;
-                    createCard(t, 'PHOTO');
-                }, undefined, (err) => {
-                    const canvas = document.createElement('canvas'); canvas.width=512; canvas.height=512;
-                    const ctx=canvas.getContext('2d'); ctx.fillStyle='#333'; ctx.fillRect(0,0,512,512);
-                    ctx.fillStyle='#eebb66'; ctx.font='40px sans-serif'; ctx.textAlign='center'; ctx.fillText('Image Failed', 256, 256);
-                    const t = new THREE.CanvasTexture(canvas); createCard(t, 'PHOTO');
-                });
-            });
-        }
-
-        function loadPoems() {
-            POEMS.forEach(poem => {
-                const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 1200; const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#e3d0b0'; ctx.fillRect(0,0,1024,1200);
-                ctx.fillStyle = 'rgba(100, 80, 60, 0.08)'; for(let i=0; i<8000; i++) { ctx.fillRect(Math.random()*1024, Math.random()*1200, 2, 2); }
-                ctx.strokeStyle = '#8b5a2b'; ctx.lineWidth = 15; ctx.strokeRect(30, 30, 964, 1140); 
-                ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 5; ctx.strokeRect(50, 50, 924, 1100);
-                ctx.fillStyle = '#3e2723'; ctx.textAlign = 'center';
-                
-                const titleFont = 'bold 80px "Cinzel", serif';
-                const bodyFont = '48px "Ma Shan Zheng", serif';
-                const maxWidth = 900;
-                const lineHeight = 70;
-                const lines = [];
-                
-                ctx.font = bodyFont;
-                const rawLines = poem.lines.split('\n');
-                rawLines.forEach(rawLine => {
-                    let currentLine = '';
-                    const words = rawLine.split(' ');
-                    for (let n = 0; n < words.length; n++) {
-                        const testLine = currentLine + words[n] + ' ';
-                        const metrics = ctx.measureText(testLine);
-                        if (metrics.width > maxWidth && n > 0) {
-                            lines.push(currentLine);
-                            currentLine = words[n] + ' ';
-                        } else {
-                            currentLine = testLine;
-                        }
-                    }
-                    lines.push(currentLine);
-                });
-
-                ctx.font = titleFont;
-                ctx.fillText(poem.title, 512, 180);
-                ctx.beginPath(); ctx.moveTo(312, 230); ctx.lineTo(712, 230); ctx.strokeStyle = '#3e2723'; ctx.lineWidth=3; ctx.stroke();
-                
-                ctx.font = bodyFont;
-                let y = 350;
-                lines.forEach(line => { ctx.fillText(line, 512, y); y += lineHeight; });
-                
-                const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-                createCard(tex, 'POEM');
-            });
-        }
-
-        function createTextOverlay() {
-            const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 256; const ctx = canvas.getContext('2d');
-            ctx.font = '120px "Great Vibes", "Brush Script MT", cursive'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-            const gradient = ctx.createLinearGradient(0, 0, 1024, 0); gradient.addColorStop(0, '#ffaa33'); gradient.addColorStop(0.5, '#ffffdd'); gradient.addColorStop(1, '#ff8800');
-            ctx.fillStyle = gradient; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 5; ctx.shadowOffsetX = 3; ctx.shadowOffsetY = 3;
-            ctx.fillText("Merry Christmas", 984, 128);
-            const tex = new THREE.CanvasTexture(canvas); const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 1.0, side: THREE.DoubleSide });
-            const geo = new THREE.PlaneGeometry(2.0, 0.5); return new THREE.Mesh(geo, mat);
-        }
-
-        function createCard(texture, type) {
-            const group = new THREE.Group();
-            group.renderOrder = 999; 
-            
-            const img = texture.image;
-            let width = 1.3;  
-            let height = 1.6; 
-
-            if (img && img.width && img.height) {
-                const aspect = img.height / img.width;
-                height = width * aspect;
-                if (height > 2.2) height = 2.2; 
-            }
-
-            const frameGeo = new THREE.BoxGeometry(width + 0.2, height + 0.2, 0.06);
-            const frameMat = new THREE.MeshStandardMaterial({ color: STYLES.GOLD.colors.primary, metalness: 1.0, roughness: 0.15, emissive: 0x332200, emissiveIntensity: 0.2 });
-            const frame = new THREE.Mesh(frameGeo, frameMat); 
-            frame.userData = { parentGroup: group }; 
-            frame.name = "FRAME_MESH"; 
-            group.add(frame);
-            interactableObjects.push(frame); 
-            
-            const contentGeo = new THREE.PlaneGeometry(width, height);
-            let contentMat;
-            if (type === 'POEM') {
-                contentMat = new THREE.MeshBasicMaterial({ map: texture, toneMapped: false, side: THREE.DoubleSide });
-            } else {
-                contentMat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide }); 
-            }
-            
-            const content = new THREE.Mesh(contentGeo, contentMat); content.position.z = 0.035; group.add(content);
-            interactableObjects.push(content); content.userData = { parentGroup: group }; 
-
-            if (type === 'PHOTO') {
-                const textMesh = createTextOverlay(); 
-                textMesh.position.set(width * 0.3, -height * 0.45, 0.06); 
-                textMesh.rotation.z = 0.05; 
-                group.add(textMesh);
-            }
-            const s = 1.3; group.scale.set(s,s,s); group.userData = { isInteractable: true, type: type };
-            mainGroup.add(group); 
-            particleSystem.push(new Particle(group, type));
-        }
-
-        function setupInteractions() {
-            window.addEventListener('resize', () => {
-                updateCameraPosition();
-                renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
-            });
-            // 绑定到 #canvas-container 以确保事件不被遮挡
-            const canvasContainer = document.getElementById('canvas-container');
-            
-            // Pointer Events (统一鼠标和触摸)
-            canvasContainer.addEventListener('pointerdown', onPointerDown);
-            canvasContainer.addEventListener('pointermove', onPointerMove);
-            canvasContainer.addEventListener('pointerup', onPointerUp);
-            canvasContainer.addEventListener('pointercancel', onPointerUp);
-
-            document.getElementById('file-input').addEventListener('change', (e) => {
-                if(e.target.files && e.target.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                        new THREE.TextureLoader().load(ev.target.result, t => {
-                            t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.minFilter = THREE.LinearFilter; t.magFilter = THREE.LinearFilter;
-                            createCard(t, 'PHOTO'); playSoundEffect('sparkle');
-                        });
-                    }
-                    reader.readAsDataURL(e.target.files[0]);
-                }
-            });
-            const musicBtn = document.getElementById('music-btn'); 
-            const bgm = document.getElementById('bgm');
-            musicBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); 
-                if (bgm.paused) { bgm.play(); musicBtn.textContent = '🎵 Music: ON'; musicBtn.classList.remove('active'); } 
-                else { bgm.pause(); musicBtn.textContent = '🔇 Music: OFF'; musicBtn.classList.add('active'); }
-            });
-
-            const nextBtn = document.getElementById('next-bgm-btn');
-            nextBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); 
-                currentBgmIndex = (currentBgmIndex + 1) % BGM_LIST.length;
-                bgm.src = BGM_LIST[currentBgmIndex];
-                bgm.play()
-                    .then(() => {
-                        musicBtn.textContent = '🎵 Music: ON';
-                        musicBtn.classList.remove('active');
-                    })
-                    .catch(e => console.log("Play error", e));
-            });
-
-            const styleBtn = document.getElementById('style-btn');
-            styleBtn.addEventListener('click', toggleStyle);
-        }
-
         // ==========================================
         // 📱 手机交互重写：Pointer Events
         // ==========================================
         function onPointerDown(e) {
-            // 忽略多点触控的副手指
             if (!e.isPrimary) return;
-            // UI 元素点击穿透已由 CSS pointer-events 处理，这里只需关注 canvas 交互
+            if (e.target.closest('button') || e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
 
             STATE.isDragging = false;
-            STATE.isPointerDown = true; // 标记指针已按下
+            STATE.isPointerDown = true; 
             STATE.startX = e.clientX;
             STATE.startY = e.clientY;
             STATE.lastX = e.clientX;
             STATE.lastY = e.clientY;
             STATE.touchStartTime = Date.now();
             
-            // 捕获指针，确保拖拽流畅
             e.target.setPointerCapture(e.pointerId);
         }
 
         function onPointerMove(e) {
             if (!e.isPrimary) return;
-            
-            // 如果指针没按下（单纯鼠标滑动），不执行拖拽逻辑
             if (!STATE.isPointerDown) return;
 
             const dx = e.clientX - STATE.lastX;
             const dy = e.clientY - STATE.lastY;
 
-            // 移动阈值判断
             if (!STATE.isDragging && Math.hypot(e.clientX - STATE.startX, e.clientY - STATE.startY) > 5) {
                 STATE.isDragging = true;
             }
@@ -896,11 +701,9 @@
         function onPointerUp(e) {
             if (!e.isPrimary) return;
             e.target.releasePointerCapture(e.pointerId);
-            
-            STATE.isPointerDown = false; // 重置指针状态
+            STATE.isPointerDown = false; 
 
             if (!STATE.isDragging) {
-                // 如果不是拖拽，那就是点击
                 checkIntersection(STATE.startX, STATE.startY);
             }
             STATE.isDragging = false;
@@ -943,35 +746,46 @@
         function enterViewMode(target) {
             STATE.mode = 'VIEW'; STATE.viewTarget = target; 
             STATE.viewRotation = { x: 0, y: 0 }; 
-            playSoundEffect('whoosh');
-            document.getElementById('view-overlay').classList.add('active'); document.querySelector('.bottom-controls').style.opacity = '0';
+            
+            // 🌟 开启背景幕布
+            viewBackdrop.material.opacity = 1;
+
+            document.getElementById('view-overlay').classList.add('active'); 
+            document.querySelector('.bottom-controls').style.opacity = '0';
         }
+
         function closeViewMode() {
             STATE.mode = 'TREE'; STATE.viewTarget = null;
-            document.getElementById('view-overlay').classList.remove('active'); document.querySelector('.bottom-controls').style.opacity = '1';
+            
+            // 🌟 隐藏背景幕布
+            viewBackdrop.material.opacity = 0;
+
+            document.getElementById('view-overlay').classList.remove('active'); 
+            document.querySelector('.bottom-controls').style.opacity = '1';
         }
+
         function toggleMode() {
             if (STATE.mode === 'TREE') {
                 const style = SCATTER_STYLES[STATE.scatterIndex];
                 STATE.scatterStyle = style;
                 particleSystem.forEach(p => p.calculateScatterPosition(style));
                 
-                // 💥 触发爆发动画
                 STATE.isBursting = true;
                 STATE.burstTime = 0; 
                 
                 STATE.mode = 'SCATTER';
                 STATE.scatterIndex = (STATE.scatterIndex + 1) % SCATTER_STYLES.length;
             } else {
+                // 🔄 回到树形态时，切换树的配色变种
                 STATE.mode = 'TREE';
+                STATE.treeVariantIndex = (STATE.treeVariantIndex + 1) % TREE_VARIANTS.length;
+                applyTreeVariant(STATE.treeVariantIndex);
             }
             playSoundEffect('chime');
         }
 
         function playSoundEffect(type) {
-            if (type === 'chime') {
-                // Simplified effect without AudioContext dependency for now
-            } 
+            // Simplified effect without AudioContext dependency for now
         }
 
         function onWindowResize() { 
@@ -988,9 +802,21 @@
             
             updateSnow();
 
+            // 更新背景幕布的透明度过渡
+            if (viewBackdrop) {
+                const targetOp = (STATE.mode === 'VIEW') ? 1 : 0;
+                viewBackdrop.material.opacity = THREE.MathUtils.lerp(viewBackdrop.material.opacity, targetOp, 5 * dt);
+            }
+            
+            // 更新爆发动画
+            if (STATE.isBursting) {
+                STATE.burstTime += dt * 2.0; 
+                if (STATE.burstTime >= 1.0) STATE.isBursting = false;
+            }
+
             if (STATE.mode !== 'VIEW') {
                 if (!STATE.isDragging) { 
-                    STATE.targetRotation.y += 0.3 * dt; 
+                    STATE.targetRotation.y += 0.2 * dt; 
                     STATE.targetRotation.x = THREE.MathUtils.lerp(STATE.targetRotation.x, 0, dt); 
                 }
                 
@@ -1020,11 +846,9 @@
 
                 STATE.viewTarget.quaternion.slerp(targetLocalQuat, 8 * dt);
                 
-                // 动态计算基础缩放
                 const baseScale = window.innerWidth < 600 ? 1.5 : 2.2;
                 const s = baseScale + Math.sin(time) * 0.02; STATE.viewTarget.scale.lerp(new THREE.Vector3(s, s, s), 4 * dt);
                 
-                // 动态 Bloom 控制
                 const targetBloom = STATE.mode === 'VIEW' ? 0.0 : STYLES[currentStyleKey].bloomStrength;
                 bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, targetBloom, 5 * dt);
                 renderer.toneMappingExposure = THREE.MathUtils.lerp(renderer.toneMappingExposure, 0.8, 5 * dt);
