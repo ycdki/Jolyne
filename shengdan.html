@@ -990,7 +990,7 @@
 
             if (STATE.mode !== 'VIEW') {
                 if (!STATE.isDragging) { 
-                    STATE.targetRotation.y += 0.3 * dt; 
+                    STATE.targetRotation.y += 0.2 * dt; 
                     STATE.targetRotation.x = THREE.MathUtils.lerp(STATE.targetRotation.x, 0, dt); 
                 }
                 
