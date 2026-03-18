@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>批量图片宫格切片工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        :root { --primary-color: #4CAF50; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; color: #2c3e50; }
+        
+        /* 拖拽区域样式 */
+        #drop-zone { border: 2px dashed #bdc3c7; border-radius: 10px; padding: 50px 20px; text-align: center; background-color: #fff; cursor: pointer; transition: all 0.3s ease; margin-bottom: 20px; }
+        #drop-zone.dragover { border-color: var(--primary-color); background-color: #e8f5e9; }
+        #drop-zone p { margin: 0; font-size: 18px; color: #7f8c8d; }
+        
+        /* 控制面板样式 */
+        .controls { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .radio-group label { margin-right: 15px; font-size: 16px; cursor: pointer; }
+        button { background-color: var(--primary-color); color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #45a049; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        
+        /* 文件列表样式 */
+        #file-list { list-style: none; padding: 0; }
+        #file-list li { background: #fff; padding: 10px 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; }
+        .status { color: var(--primary-color); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>🧩 批量图片宫格切片工具</h1>
+
+    <div id="drop-zone">
+        <p>将图片拖拽到此处，或 <strong>点击选择图片</strong></p>
+        <p style="font-size: 14px; margin-top: 10px;">支持批量导入 (JPG, PNG等)</p>
+    </div>
+    <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+
+    <div class="controls">
+        <div class="radio-group">
+            <strong>切割模式：</strong>
+            <label><input type="radio" name="gridMode" value="2" checked> 四宫格 (2x2)</label>
+            <label><input type="radio" name="gridMode" value="3"> 九宫格 (3x3)</label>
+        </div>
+        <button id="process-btn" disabled>处理并导出 ZIP</button>
+    </div>
+
+    <ul id="file-list"></ul>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileList = document.getElementById('file-list');
+        const processBtn = document.getElementById('process-btn');
+        let selectedFiles = [];
+
+        // --- 1. 处理拖拽与点击导入 ---
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            for (let file of files) {
+                if (file.type.startsWith('image/')) {
+                    selectedFiles.push(file);
+                }
+            }
+            renderFileList();
+        }
+
+        function renderFileList() {
+            fileList.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${file.name}</span> <span class="status" id="status-${index}">等待处理</span>`;
+                fileList.appendChild(li);
+            });
+            processBtn.disabled = selectedFiles.length === 0;
+            processBtn.textContent = '处理并导出 ZIP';
+        }
+
+        // --- 2. 核心逻辑：图片加载与 Canvas 裁剪 ---
+        function loadImage(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        processBtn.addEventListener('click', async () => {
+            processBtn.disabled = true;
+            processBtn.textContent = '正在处理中...';
+            
+            const zip = new JSZip();
+            const grid = parseInt(document.querySelector('input[name="gridMode"]:checked').value); // 2 或 3
+
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                document.getElementById(`status-${i}`).textContent = '处理中...';
+                document.getElementById(`status-${i}`).style.color = '#f39c12';
+
+                const img = await loadImage(file);
+                const cellWidth = Math.floor(img.width / grid);
+                const cellHeight = Math.floor(img.height / grid);
+                
+                // 为每张图片在ZIP里建一个独立文件夹
+                const folderName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                const imgFolder = zip.folder(folderName);
+
+                // 遍历宫格进行切割
+                for (let row = 0; row < grid; row++) {
+                    for (let col = 0; col < grid; col++) {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = cellWidth;
+                        canvas.height = cellHeight;
+                        const ctx = canvas.getContext('2d');
+                        
+                        // 从原图绘制指定区域到 Canvas
+                        ctx.drawImage(img, col * cellWidth, row * cellHeight, cellWidth, cellHeight, 0, 0, cellWidth, cellHeight);
+                        
+                        // 将 Canvas 转换为 Blob 并存入 ZIP
+                        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+                        // 命名规则：比如 1.jpg -> 1/part_1.jpg (1到9)
+                        const partNumber = row * grid + col + 1; 
+                        imgFolder.file(`part_${partNumber}.jpg`, blob);
+                    }
+                }
+                document.getElementById(`status-${i}`).textContent = '已完成';
+                document.getElementById(`status-${i}`).style.color = '#4CAF50';
+            }
+
+            // --- 3. 生成并下载 ZIP 文件 ---
+            processBtn.textContent = '正在打包下载...';
+            const zipContent = await zip.generateAsync({ type: 'blob' });
+            saveAs(zipContent, '切片图片导出.zip');
+            
+            processBtn.textContent = '处理并导出 ZIP';
+            processBtn.disabled = false;
+        });
+    </script>
+</body>
+</html>
