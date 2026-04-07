@@ -3,59 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>批量图片切片工具 - 文件夹导出版</title>
+    <title>图片批量切片 - 极速版</title>
     <style>
         :root { --primary-color: #2196F3; --danger-color: #f44336; }
-        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background-color: #f8f9fa; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
-        h1 { text-align: center; color: #1a73e8; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background-color: #f8f9fa; color: #333; max-width: 850px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; color: #1a73e8; font-size: 24px; }
         
-        /* 拖拽区域 */
-        #drop-zone { border: 2px dashed #dadce0; border-radius: 12px; padding: 40px; text-align: center; background: white; cursor: pointer; transition: 0.3s; margin-bottom: 20px; }
+        #drop-zone { border: 2px dashed #dadce0; border-radius: 12px; padding: 30px; text-align: center; background: white; cursor: pointer; transition: 0.2s; margin-bottom: 20px; }
         #drop-zone.dragover { border-color: var(--primary-color); background-color: #e8f0fe; }
-        #drop-zone p { margin: 5px 0; color: #5f6368; }
-
-        /* 控制面板 */
-        .controls { background: white; padding: 20px; border-radius: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .btn-group { display: flex; gap: 10px; }
         
-        button { border: none; padding: 10px 20px; font-size: 14px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-weight: 500; }
+        .controls { background: white; padding: 15px 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .btn-group { display: flex; gap: 8px; }
+        
+        button { border: none; padding: 10px 18px; font-size: 14px; border-radius: 6px; cursor: pointer; font-weight: 500; transition: 0.1s; }
         .btn-main { background-color: var(--primary-color); color: white; }
-        .btn-main:hover { background-color: #1976D2; }
+        .btn-main:hover { opacity: 0.9; }
         .btn-danger { background-color: #fff; color: var(--danger-color); border: 1px solid var(--danger-color); }
-        .btn-danger:hover { background-color: #fdeded; }
-        button:disabled { background-color: #e0e0e0; color: #9e9e9e; border: none; cursor: not-allowed; }
+        .btn-danger:hover { background-color: #fff5f5; }
+        button:disabled { background-color: #eee; color: #aaa; border: none; cursor: not-allowed; }
 
-        /* 图片列表 */
         #file-list { list-style: none; padding: 0; }
-        .file-item { background: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .file-info { display: flex; align-items: center; gap: 10px; flex: 1; }
-        .file-name { font-size: 14px; color: #3c4043; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 400px; }
-        .status-tag { font-size: 12px; padding: 2px 8px; border-radius: 4px; background: #f1f3f4; color: #5f6368; }
-        .delete-icon { color: #9e9e9e; cursor: pointer; padding: 5px; font-weight: bold; font-size: 18px; }
-        .delete-icon:hover { color: var(--danger-color); }
-
-        .config-item { display: flex; align-items: center; gap: 10px; }
+        .file-item { background: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee; }
+        .file-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+        .file-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .status-tag { font-size: 12px; color: #999; }
+        .delete-btn { color: #ccc; cursor: pointer; font-size: 20px; padding: 0 10px; line-height: 1; }
+        .delete-btn:hover { color: var(--danger-color); }
     </style>
 </head>
 <body>
 
-    <h1>🧩 批量切图工具 (直存文件夹版)</h1>
+    <h1>🧩 批量切图 (无弹窗版)</h1>
 
     <div id="drop-zone">
-        <p>📁 拖拽图片到这里，或者 <strong>点击上传</strong></p>
-        <p style="font-size: 12px;">支持批量导入，处理过程完全在浏览器本地完成</p>
+        <p>直接拖入图片 或 点击上传</p>
     </div>
     <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
 
     <div class="controls">
-        <div class="config-item">
-            <strong>切割模式：</strong>
-            <label><input type="radio" name="gridMode" value="2" checked> 四宫格</label>
-            <label><input type="radio" name="gridMode" value="3"> 九宫格</label>
+        <div>
+            <label><input type="radio" name="gridMode" value="2" checked> 2x2</label>
+            <label style="margin-left:15px"><input type="radio" name="gridMode" value="3"> 3x3</label>
         </div>
         <div class="btn-group">
-            <button id="clear-btn" class="btn-danger" disabled>清空列表</button>
-            <button id="process-btn" class="btn-main" disabled>开始处理并选择导出文件夹</button>
+            <button id="clear-btn" class="btn-danger" disabled>清空</button>
+            <button id="process-btn" class="btn-main" disabled>保存到文件夹</button>
         </div>
     </div>
 
@@ -68,46 +60,38 @@
         const processBtn = document.getElementById('process-btn');
         const clearBtn = document.getElementById('clear-btn');
         
-        let selectedFiles = []; // 存储文件对象的数组
+        let selectedFiles = [];
 
-        // --- 交互逻辑 ---
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (e) => {
+        // 交互逻辑
+        dropZone.onclick = () => fileInput.click();
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+        dropZone.ondrop = (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
             addFiles(e.dataTransfer.files);
-        });
+        };
 
-        fileInput.addEventListener('change', (e) => addFiles(e.target.files));
+        fileInput.onchange = (e) => addFiles(e.target.files);
 
         function addFiles(files) {
             for (let file of files) {
                 if (file.type.startsWith('image/')) {
-                    selectedFiles.push({
-                        id: Date.now() + Math.random(), // 唯一标识用于删除
-                        file: file,
-                        status: '等待中'
-                    });
+                    selectedFiles.push({ id: Math.random(), file: file, status: '等待' });
                 }
             }
             render();
         }
 
-        // 删除单个文件
         function deleteFile(id) {
             selectedFiles = selectedFiles.filter(item => item.id !== id);
             render();
         }
 
-        // 清空所有文件
-        clearBtn.addEventListener('click', () => {
-            if(confirm('确定要清空文件列表吗？')) {
-                selectedFiles = [];
-                render();
-            }
-        });
+        clearBtn.onclick = () => {
+            selectedFiles = [];
+            render();
+        };
 
         function render() {
             fileList.innerHTML = '';
@@ -119,81 +103,49 @@
                         <span class="file-name">${item.file.name}</span>
                         <span class="status-tag">${item.status}</span>
                     </div>
-                    <span class="delete-icon" onclick="deleteFile(${item.id})">×</span>
+                    <span class="delete-btn" onclick="deleteFile(${item.id})">×</span>
                 `;
                 fileList.appendChild(li);
             });
-            
-            const hasFiles = selectedFiles.length > 0;
-            processBtn.disabled = !hasFiles;
-            clearBtn.disabled = !hasFiles;
+            processBtn.disabled = clearBtn.disabled = selectedFiles.length === 0;
         }
 
-        // --- 核心处理逻辑 ---
-        async function loadImage(file) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => resolve(img);
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        processBtn.addEventListener('click', async () => {
-            if (!('showDirectoryPicker' in window)) {
-                alert('您的浏览器不支持直接写入文件夹，请使用 Chrome 或 Edge 浏览器。');
-                return;
-            }
-
+        // 核心裁剪逻辑
+        processBtn.onclick = async () => {
             try {
                 const directoryHandle = await window.showDirectoryPicker();
-                processBtn.disabled = true;
-                clearBtn.disabled = true;
-
+                processBtn.disabled = clearBtn.disabled = true;
                 const grid = parseInt(document.querySelector('input[name="gridMode"]:checked').value);
 
-                for (let i = 0; i < selectedFiles.length; i++) {
-                    const item = selectedFiles[i];
-                    item.status = '处理中...';
-                    render();
+                for (let item of selectedFiles) {
+                    item.status = '处理中...'; render();
+                    const img = await new Promise(res => {
+                        const r = new FileReader();
+                        r.onload = (e) => { const i = new Image(); i.onload = () => res(i); i.src = e.target.result; };
+                        r.readAsDataURL(item.file);
+                    });
 
-                    const img = await loadImage(item.file);
-                    const cellWidth = Math.floor(img.width / grid);
-                    const cellHeight = Math.floor(img.height / grid);
-                    
+                    const w = Math.floor(img.width / grid);
+                    const h = Math.floor(img.height / grid);
                     const folderName = item.file.name.replace(/\.[^/.]+$/, "");
                     const subDir = await directoryHandle.getDirectoryHandle(folderName, { create: true });
 
-                    for (let row = 0; row < grid; row++) {
-                        for (let col = 0; col < grid; col++) {
-                            const canvas = document.createElement('canvas');
-                            canvas.width = cellWidth;
-                            canvas.height = cellHeight;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, col * cellWidth, row * cellHeight, cellWidth, cellHeight, 0, 0, cellWidth, cellHeight);
-                            
-                            const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.9));
-                            const fileHandle = await subDir.getFileHandle(`cut_${row+1}_${col+1}.jpg`, { create: true });
-                            const writable = await fileHandle.createWritable();
-                            await writable.write(blob);
-                            await writable.close();
+                    for (let r = 0; r < grid; r++) {
+                        for (let c = 0; c < grid; c++) {
+                            const cvs = document.createElement('canvas');
+                            cvs.width = w; cvs.height = h;
+                            cvs.getContext('2d').drawImage(img, c*w, r*h, w, h, 0, 0, w, h);
+                            const blob = await new Promise(res => cvs.toBlob(res, 'image/jpeg', 0.95));
+                            const fh = await subDir.getFileHandle(`part_${r+1}_${c+1}.jpg`, { create: true });
+                            const wr = await fh.createWritable();
+                            await wr.write(blob); await wr.close();
                         }
                     }
-                    item.status = '完成 ✅';
-                    render();
+                    item.status = '完成'; render();
                 }
-                alert('所有图片处理完成！');
-            } catch (err) {
-                console.error(err);
-            } finally {
-                processBtn.disabled = false;
-                clearBtn.disabled = false;
-                processBtn.textContent = '开始处理并选择导出文件夹';
-            }
-        });
+            } catch (e) { console.log('User cancelled or error'); }
+            processBtn.disabled = clearBtn.disabled = false;
+        };
     </script>
 </body>
 </html>
