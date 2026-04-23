@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>切图工具 - 智能遍历版</title>
+    <title>切图工具 - 智能去白边版</title>
     <style>
         :root { --primary: #0ea5e9; --bg: #f8fafc; --border: #cbd5e1; }
         body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: #1e293b; max-width: 900px; margin: 0 auto; padding: 30px 20px; }
@@ -20,7 +20,7 @@
         input[type="text"]:focus { border-color: var(--primary); }
         
         .action-zone { display: flex; justify-content: flex-end; margin-top: 10px; }
-        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2; font-size: 15px; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 15px; }
         button:hover { background: #0284c7; }
         button:disabled { background: #94a3b8; cursor: not-allowed; }
 
@@ -34,20 +34,28 @@
 <body>
 
 <div class="card">
-    <h1>🧩 自动化控制台</h1>
+    <h1>🧩 自动化切图控制台</h1>
     
     <div class="setup-group">
-        <div class="setup-title">1. 切割模式</div>
-        <label class="radio-item" style="display:inline-flex; margin-right: 20px;">
-            <input type="radio" name="gridMode" value="2" checked> 四宫格 (2x2)
-        </label>
-        <label class="radio-item" style="display:inline-flex;">
-            <input type="radio" name="gridMode" value="3"> 九宫格 (3x3)
-        </label>
+        <div class="setup-title">1. 切割模式 & 图像优化</div>
+        <div style="display: flex; gap: 20px; margin-bottom: 15px;">
+            <label class="radio-item">
+                <input type="radio" name="gridMode" value="2" checked> 四宫格 (2x2)
+            </label>
+            <label class="radio-item">
+                <input type="radio" name="gridMode" value="3"> 九宫格 (3x3)
+            </label>
+        </div>
+        <div style="padding-top: 12px; border-top: 1px dashed #cbd5e1;">
+            <label class="radio-item" style="color: #0369a1; font-weight: 500;">
+                <input type="checkbox" id="zoom-toggle"> 
+                中心放大 10% (用于自动消除 AIGC 网格图的白边)
+            </label>
+        </div>
     </div>
     
     <div class="setup-group">
-        <div class="setup-title">2. 扫描范围 (处理多个商品文件夹必备)</div>
+        <div class="setup-title">2. 扫描范围 (批量工作流)</div>
         <label class="radio-item">
             <input type="radio" name="scanMode" value="root"> 
             只处理当前选中的根目录（不进子文件夹寻找）
@@ -97,10 +105,13 @@
             r.readAsDataURL(file);
         });
 
+        // 判断是否开启放大功能
+        const isZoomEnabled = document.getElementById('zoom-toggle').checked;
+        const scale = isZoomEnabled ? 1.1 : 1.0; // 1.1 代表放大 10%
+
         const w = Math.floor(img.width / grid);
         const h = Math.floor(img.height / grid);
         
-        // 在原图所在文件夹下，创建一个和原图同名的子文件夹
         const folderName = file.name.replace(/\.[^/.]+$/, "");
         const subDir = await parentHandle.getDirectoryHandle(folderName, { create: true });
 
@@ -108,7 +119,20 @@
             for (let c = 0; c < grid; c++) {
                 const cvs = document.createElement('canvas');
                 cvs.width = w; cvs.height = h;
-                cvs.getContext('2d').drawImage(img, c*w, r*h, w, h, 0, 0, w, h);
+                const ctx = cvs.getContext('2d');
+                
+                // 核心去白边算法：计算实际需要截取的源图像区域
+                const sourceW = w / scale;
+                const sourceH = h / scale;
+                const offsetX = (w - sourceW) / 2;
+                const offsetY = (h - sourceH) / 2;
+                
+                // sx, sy 是在原图上的起始坐标，加上 offset 就相当于往中心收缩了
+                const sx = c * w + offsetX;
+                const sy = r * h + offsetY;
+
+                // drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
+                ctx.drawImage(img, sx, sy, sourceW, sourceH, 0, 0, w, h);
                 
                 const blob = await new Promise(res => cvs.toBlob(res, 'image/jpeg', 0.95));
                 const fh = await subDir.getFileHandle(`part_${r+1}_${c+1}.jpg`, { create: true });
@@ -117,7 +141,7 @@
                 await wr.close();
             }
         }
-        appendLog(`  ✅ 切图完成: ${file.name} -> 已存入同名目录`, 'success');
+        appendLog(`  ✅ 切图完成: ${file.name} ${isZoomEnabled ? '(已去白边)' : ''}`, 'success');
     }
 
     // 目录遍历核心引擎
@@ -131,7 +155,6 @@
         let shouldProcessHere = false;
         let shouldRecurse = false;
 
-        // 核心修正：精准模式下，强制允许递归寻找
         if (mode === 'root') {
             shouldProcessHere = (currentDepth === 0);
             shouldRecurse = false;
@@ -140,10 +163,9 @@
             shouldRecurse = true;
         } else if (mode === 'specific') {
             shouldProcessHere = (dirHandle.name === targetName);
-            shouldRecurse = true; // 开启穿透，向下寻找目标
+            shouldRecurse = true;
         }
 
-        // 仅在确认需要处理且目录里确实有图片时，才打印日志，避免日志刷屏
         if (shouldProcessHere) {
             let hasImage = false;
             for await (const entry of dirHandle.values()) {
