@@ -3,13 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>切图工具 - 智能去白边版</title>
+    <title>切图工具 - 全能增强版</title>
     <style>
         :root { --primary: #0ea5e9; --bg: #f8fafc; --border: #cbd5e1; }
         body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: #1e293b; max-width: 900px; margin: 0 auto; padding: 30px 20px; }
         .card { background: white; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 24px; }
-        h1 { margin: 0 0 20px 0; font-size: 22px; color: #0f172a; }
+        h1 { margin: 0 0 20px 0; font-size: 22px; color: #0f172a; display: flex; justify-content: space-between; align-items: center; }
         
+        /* 拖拽区样式 */
+        .drop-zone { border: 2px dashed #94a3b8; border-radius: 8px; padding: 30px 20px; text-align: center; background: #f8fafc; cursor: pointer; transition: all 0.2s ease; margin-bottom: 24px; }
+        .drop-zone.dragover { border-color: var(--primary); background: #e0f2fe; transform: scale(1.01); }
+        .drop-zone-title { font-size: 16px; font-weight: 600; color: #334155; margin-bottom: 8px; }
+        .drop-zone-desc { font-size: 13px; color: #64748b; }
+
         .setup-group { margin-bottom: 20px; background: #f1f5f9; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; }
         .setup-title { font-weight: 600; margin-bottom: 12px; color: #334155; font-size: 15px; }
         
@@ -19,7 +25,8 @@
         input[type="text"] { padding: 4px 8px; border: 1px solid #94a3b8; border-radius: 4px; font-size: 13px; outline: none; width: 100px; }
         input[type="text"]:focus { border-color: var(--primary); }
         
-        .action-zone { display: flex; justify-content: flex-end; margin-top: 10px; }
+        .action-zone { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .action-hint { font-size: 13px; color: #64748b; }
         button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 15px; }
         button:hover { background: #0284c7; }
         button:disabled { background: #94a3b8; cursor: not-allowed; }
@@ -34,10 +41,15 @@
 <body>
 
 <div class="card">
-    <h1>🧩 自动化切图控制台</h1>
+    <h1>🧩 全能切图控制台</h1>
+    
+    <div id="drop-zone" class="drop-zone">
+        <div class="drop-zone-title">📥 快速模式：拖拽图片到这里直接切图</div>
+        <div class="drop-zone-desc">支持单张或多张拖拽。将自动读取下方设置，切完需手动选择保存位置。</div>
+    </div>
     
     <div class="setup-group">
-        <div class="setup-title">1. 切割模式 & 图像优化</div>
+        <div class="setup-title">1. 切割模式 & 图像优化 (全局生效)</div>
         <div style="display: flex; gap: 20px; margin-bottom: 15px;">
             <label class="radio-item">
                 <input type="radio" name="gridMode" value="2" checked> 四宫格 (2x2)
@@ -55,7 +67,7 @@
     </div>
     
     <div class="setup-group">
-        <div class="setup-title">2. 扫描范围 (批量工作流)</div>
+        <div class="setup-title">2. 批量扫描范围 (仅适用于下方按钮)</div>
         <label class="radio-item">
             <input type="radio" name="scanMode" value="root"> 
             只处理当前选中的根目录（不进子文件夹寻找）
@@ -71,17 +83,19 @@
     </div>
 
     <div class="action-zone">
-        <button id="start-btn">选择根文件夹并开始</button>
+        <div class="action-hint">👈 零散图片往上拖拽</div>
+        <button id="start-btn">📁 选择根目录开始批量扫描</button>
     </div>
 
     <div id="log">
-        <div style="color: #94a3b8;">> 准备就绪，等待选择文件夹...</div>
+        <div style="color: #94a3b8;">> 工具准备就绪。您可以拖拽图片，或者点击按钮扫描文件夹...</div>
     </div>
 </div>
 
 <script>
     const logEl = document.getElementById('log');
     const startBtn = document.getElementById('start-btn');
+    const dropZone = document.getElementById('drop-zone');
     
     function appendLog(msg, type = 'info') {
         const div = document.createElement('div');
@@ -91,29 +105,26 @@
         logEl.scrollTop = logEl.scrollHeight;
     }
 
-    // 核心裁剪与保存逻辑
-    async function sliceImage(fileHandle, parentHandle, grid, currentPath) {
-        const file = await fileHandle.getFile();
+    // --- 核心：切图算法 (提取为通用函数，支持放大去白边) ---
+    async function processCanvasSlicing(file, targetDirHandle) {
+        const grid = parseInt(document.querySelector('input[name="gridMode"]:checked').value);
+        const isZoomEnabled = document.getElementById('zoom-toggle').checked;
+        const scale = isZoomEnabled ? 1.1 : 1.0;
+
         const img = await new Promise((res, rej) => {
             const r = new FileReader();
             r.onload = (e) => {
-                const i = new Image();
-                i.onload = () => res(i);
-                i.onerror = rej;
-                i.src = e.target.result;
+                const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = e.target.result;
             };
             r.readAsDataURL(file);
         });
 
-        // 判断是否开启放大功能
-        const isZoomEnabled = document.getElementById('zoom-toggle').checked;
-        const scale = isZoomEnabled ? 1.1 : 1.0; // 1.1 代表放大 10%
-
         const w = Math.floor(img.width / grid);
         const h = Math.floor(img.height / grid);
         
+        // 在目标目录下创建与原图同名的子文件夹
         const folderName = file.name.replace(/\.[^/.]+$/, "");
-        const subDir = await parentHandle.getDirectoryHandle(folderName, { create: true });
+        const subDir = await targetDirHandle.getDirectoryHandle(folderName, { create: true });
 
         for (let r = 0; r < grid; r++) {
             for (let c = 0; c < grid; c++) {
@@ -121,17 +132,14 @@
                 cvs.width = w; cvs.height = h;
                 const ctx = cvs.getContext('2d');
                 
-                // 核心去白边算法：计算实际需要截取的源图像区域
                 const sourceW = w / scale;
                 const sourceH = h / scale;
                 const offsetX = (w - sourceW) / 2;
                 const offsetY = (h - sourceH) / 2;
                 
-                // sx, sy 是在原图上的起始坐标，加上 offset 就相当于往中心收缩了
                 const sx = c * w + offsetX;
                 const sy = r * h + offsetY;
 
-                // drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
                 ctx.drawImage(img, sx, sy, sourceW, sourceH, 0, 0, w, h);
                 
                 const blob = await new Promise(res => cvs.toBlob(res, 'image/jpeg', 0.95));
@@ -144,12 +152,50 @@
         appendLog(`  ✅ 切图完成: ${file.name} ${isZoomEnabled ? '(已去白边)' : ''}`, 'success');
     }
 
-    // 目录遍历核心引擎
+
+    // --- 模块 A：拖拽快速处理逻辑 ---
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+        if (files.length === 0) {
+            appendLog('⚠️ 未检测到有效图片，请重新拖拽。', 'warn');
+            return;
+        }
+
+        try {
+            appendLog(`📥 接收到 ${files.length} 张拖拽图片，请选择存放切片的文件夹...`, 'info');
+            // 拖拽模式下，必须手动选择一个输出文件夹
+            const outputDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            
+            for (const file of files) {
+                await processCanvasSlicing(file, outputDirHandle);
+            }
+            appendLog('🏁 拖拽图片全部处理完毕！', 'success');
+        } catch (err) {
+            if(err.name === 'AbortError') {
+                appendLog('已取消选择保存位置。', 'warn');
+            } else {
+                appendLog('发生错误: ' + err.message, 'error');
+            }
+        }
+    });
+
+
+    // --- 模块 B：批量扫描处理逻辑 ---
     async function scanAndProcess(dirHandle, currentDepth = 0, path = '') {
         const mode = document.querySelector('input[name="scanMode"]:checked').value;
         const targetName = document.getElementById('target-name').value.trim();
-        const grid = parseInt(document.querySelector('input[name="gridMode"]:checked').value);
-
         const currentPath = path ? `${path}/${dirHandle.name}` : dirHandle.name;
 
         let shouldProcessHere = false;
@@ -181,7 +227,9 @@
         for await (const entry of dirHandle.values()) {
             if (entry.kind === 'file') {
                 if (shouldProcessHere && entry.name.match(/\.(jpg|jpeg|png|webp)$/i)) {
-                    await sliceImage(entry, dirHandle, grid, currentPath);
+                    const file = await entry.getFile();
+                    // 文件夹扫描模式下，目标目录就是图片所在的当前目录 (dirHandle)
+                    await processCanvasSlicing(file, dirHandle);
                 }
             } else if (entry.kind === 'directory') {
                 if (shouldRecurse) {
@@ -202,16 +250,16 @@
             const rootHandle = await window.showDirectoryPicker();
             startBtn.disabled = true;
             logEl.innerHTML = '';
-            appendLog('🚀 开始执行批量任务...');
+            appendLog('🚀 开始执行批量文件夹扫描任务...');
             
             await scanAndProcess(rootHandle);
             
-            appendLog('\n🏁 所有匹配的任务已全部完成！', 'success');
+            appendLog('\n🏁 文件夹扫描任务已全部完成！', 'success');
         } catch (e) {
             if(e.name === 'AbortError') {
                 appendLog('已取消选择。', 'warn');
             } else {
-                appendLog('发生错误: ' + e.message, 'error');
+                appendLog('扫描过程发生错误: ' + e.message, 'error');
             }
         } finally {
             startBtn.disabled = false;
